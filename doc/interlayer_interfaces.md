@@ -5,32 +5,13 @@ stack must implement this interface correctly to guarantee compatibility.
 Note that all data is in the little-endian format.
 
 ## The Application Layer / Transport Layer Interface
-The application layer and transport layers are connected via a data stream. Control characters are used to indicate special
-conditions. Any instances of a control character that are to be interpreted as data must be escaped using the ESC character.
-A table of the usable control characters and their meanings is given below.
+The application layer and transport layers are connected via a data stream.
 
-| Character | Code | Description                                                                                              |
-|-----------|------|----------------------------------------------------------------------------------------------------------|
-| ETX       | 0x03 | End of text character. Used for framing.                                                                 |
-| ESC       | 0x1B | Escape character, voids the meaning of a following control character.                                    |
+For the transmit application, the frame to transmit should be written to the standard input stream. After the last byte has
+been written, the stream should be closed.
 
-### Transmit Sequence
-To transmit a frame, the application layer should begin by writing the frame's data, byte-by-byte. Any instances of control
-characters must be escaped. To end the frame, the application layer should write the ETX character. A frame can be any length.
-
-| Field     | Size (Bytes)   | Offset (Bytes) | Description                                                                   |
-|-----------|----------------|----------------|-------------------------------------------------------------------------------|
-| Frame     | N              | 0              | The frame to transmit.                                                        |
-| ETX       | 1              | N              | End of text character.                                                        |
-
-### Receive Sequence
-When a frame is received, the transport layer will begin writing its data byte-by-byte. Any instances of control characters
-will by escaped. When the frame has ended, the transport layer will write the ETX character.
-
-| Field     | Size (Bytes)   | Offset (Bytes) | Description                                                                   |
-|-----------|----------------|----------------|-------------------------------------------------------------------------------|
-| Frame     | N              | 0              | The received frame.                                                           |
-| ETX       | 1              | N              | End of text character.                                                        |
+For the receive application, the first frame that was received will be written to the standard output stream. The application
+will continue to write received frames until terminated.
 
 ## The Transport Layer / Network Layer Interface
 The transport layer and network layer are connected via a serial port. Commands are issued to the device to configure and
