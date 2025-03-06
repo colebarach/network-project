@@ -14,9 +14,9 @@ int main ()
 	while (true)
 	{
 		sio_hw->gpio_out = 0x01;
-		sleep_ms (250);
+		sleep_us (50);
 		sio_hw->gpio_out = 0x00;
-		sleep_ms (250);
+		sleep_us (50);
 	}
 }
 
