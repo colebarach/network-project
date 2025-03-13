@@ -1,0 +1,21 @@
+{
+	"version": "0.2.0",
+	"configurations":
+	[
+		{
+			"name": "Cortex Debug",
+			"cwd": "${workspaceRoot}",
+			"executable": "build/main.elf",
+			"request": "launch",
+			"type": "cortex-debug",
+			"servertype": "openocd",
+			"device": "RP2040",
+			"svdFile": ".vscode/rp2040.svd",
+			"configFiles":
+			[
+				"interface/cmsis-dap.cfg",
+				"target/rp2040.cfg"
+			]
+		}
+	]
+}
