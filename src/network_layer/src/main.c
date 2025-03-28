@@ -11,8 +11,8 @@
 
 // Constants ------------------------------------------------------------------------------------------------------------------
 
-#define ADDR_A 1
-#define TX_MODE 0
+#define SEED 0
+#define TX_MODE 1
 
 #define BAUDRATE		115200
 #define UART0_TX		0
@@ -25,15 +25,8 @@ void jamSequence ()
 	gpio_set_function (UART0_TX, GPIO_FUNC_SIO);
 	gpio_set_dir (UART0_TX, GPIO_OUT);
 
-	bool pin = true;
-	for (uint8_t i = 0; i < 8; ++i)
-	{
-		gpio_put (UART0_TX, pin);
-		pin = !pin;
-		sleep_us (4);
-	}
-
-	sleep_us (400);
+	gpio_put (UART0_TX, false);
+	sleep_us (120);
 
 	gpio_set_function (UART0_TX, GPIO_FUNC_UART);
 }
@@ -52,20 +45,22 @@ int main ()
 	gpio_init (COLLISION_PIN);
 	gpio_set_dir (COLLISION_PIN, GPIO_OUT);
 
-	#if ADDR_A
-	uint8_t txBuffer [4] = { 0xAB, 0xCD, 0x12, 0x34 };
-	#else
-	uint8_t txBuffer [4] = { 0x87, 0x65, 0xDC, 0xBA };
-	#endif
+	uint8_t txBuffer [4];
 
 	uint8_t rxBuffer;
 
 	#if TX_MODE
 
+	srand (SEED);
+
 	while (true)
 	{
+		// Random payload
+		for (uint8_t index = 0; index < sizeof (txBuffer); ++index)
+			txBuffer [index] = rand ();
+
 		// Random CSMA delay, min of 400 us
-		uint16_t target = (rand () % 512) + 400;
+		uint16_t target = (rand () % 512) + 120;
 
 		// Block until the bus is idle for the target interval.
 		uint16_t count = 0;
@@ -88,6 +83,8 @@ int main ()
 		// Transmit byte by byte, checking for collision.
 		for (uint8_t index = 0; index < sizeof (txBuffer); ++index)
 		{
+			uart_get_hw (uart0)->rsr = 0x00;
+
 			// Empty the UART's RX FIFO
 			while (uart_is_readable(uart0))
 				uart_read_blocking (uart0, &rxBuffer, sizeof (rxBuffer));
@@ -95,7 +92,7 @@ int main ()
 			// Transmit the byte
 			uart_write_blocking (uart0, txBuffer + index, 1);
 
-			sleep_us (96);
+			sleep_us (100);
 
 			// No byte read => collision
 			if (!uart_is_readable (uart0))
@@ -105,8 +102,15 @@ int main ()
 				break;
 			}
 
-			// Read the byte that was transmitted
-			uart_read_blocking (uart0, &rxBuffer, sizeof (rxBuffer));
+			// Read the byte that was transmitted. UART error => collision
+			uint32_t dr = uart_get_hw (uart0)->dr;
+			rxBuffer = (uint8_t) dr;
+			if ((dr & 0xFF00) != 0x0000 && (dr & 0xFF00) != 0x0800)
+			{
+				gpio_put (COLLISION_PIN, true);
+				jamSequence ();
+				break;
+			}
 
 			// Byte mismatch => collision
 			if (txBuffer [index] != rxBuffer)
@@ -128,8 +132,8 @@ int main ()
 
 		gpio_put (COLLISION_PIN, false);
 
-		volatile uint32_t d = uart_get_hw (uart0)->dr;
-		if (d > 0xFF)
+		uint32_t dr = uart_get_hw (uart0)->dr;
+		if (dr > 0xFF)
 		{
 			gpio_put (COLLISION_PIN, true);
 
