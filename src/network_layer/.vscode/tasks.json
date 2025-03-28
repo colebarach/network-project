@@ -1,0 +1,23 @@
+{
+	"version": "2.0.0",
+	"tasks":
+	[
+		{
+			"type": "cmake",
+			"label": "CMake: build",
+			"command": "build",
+			"targets":
+			[
+				"all"
+			],
+			"group": "build",
+			"problemMatcher": [],
+			"detail": "CMake template build task"
+		},
+		{
+			"label": "Flash",
+			"type": "shell",
+			"command": "openocd -f interface/cmsis-dap.cfg -f target/rp2040.cfg -c \"program build/main.elf verify reset exit\""
+		}
+	]
+}

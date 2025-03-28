@@ -1,3 +1,15 @@
+# Usage
+## Configuration
+- Create a directory named ```build```.
+- From said directory, run ```cmake ..```.
+## Compilation
+- From the build directory, run ```make```.
+## Programming
+- From the build directory, run
+``` openocd -f interface/cmsis-dap.cfg -f target/rp2040.cfg -c "program build/main.elf verify reset exit"```
+
+# Documentation
+
 Datagram Format:
 | Field     | Size (Bytes)   | Offset (Bytes) | Description                                                                   |
 |-----------|----------------|----------------|-------------------------------------------------------------------------------|
