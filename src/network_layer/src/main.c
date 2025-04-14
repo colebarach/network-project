@@ -11,7 +11,6 @@
 
 // Constants ------------------------------------------------------------------------------------------------------------------
 
-#define SEED				1
 #define TX_MODE				0
 
 #define BAUDRATE			115200
@@ -50,9 +49,9 @@ int main ()
 
 	uint8_t txBuffer [4];
 
-	#if TX_MODE
+	srand (0);
 
-	srand (SEED);
+	#if TX_MODE
 
 	while (true)
 	{
@@ -69,10 +68,8 @@ int main ()
 
 	while (true)
 	{
-		volatile bool test = receiveDatagram (txBuffer, sizeof (txBuffer));
-		test = test;
-		test = transmitDatagram (txBuffer, sizeof (txBuffer));
-		test = test;
+		receiveDatagram (txBuffer, sizeof (txBuffer));
+		sleep_us (2 * FRAME_TIME_US);
 	}
 
 	#endif
