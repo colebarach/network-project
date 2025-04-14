@@ -6,12 +6,16 @@
 #include "pico/stdlib.h"
 
 // C Standard Library
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 // Constants ------------------------------------------------------------------------------------------------------------------
 
-#define TX_MODE				0
+#define TX_RANDOM			0
+#define RX_ONLY				1
+#define USB_TEST			2
+#define MODE				USB_TEST
 
 #define BAUDRATE			115200
 
@@ -47,11 +51,11 @@ int main ()
 	gpio_init (COLLISION_PIN);
 	gpio_set_dir (COLLISION_PIN, GPIO_OUT);
 
-	uint8_t txBuffer [4];
+	uint8_t txBuffer [1024];
 
 	srand (0);
 
-	#if TX_MODE
+	#if MODE == TX_RANDOM
 
 	while (true)
 	{
@@ -64,12 +68,44 @@ int main ()
 		}
 	}
 
-	#else
+	#elif MODE == RX_ONLY
 
 	while (true)
 	{
 		receiveDatagram (txBuffer, sizeof (txBuffer));
 		sleep_us (2 * FRAME_TIME_US);
+	}
+
+	#elif MODE == USB_TEST
+
+	stdio_init_all ();
+	while (true)
+	{
+		// Command type (1 byte)
+		if (fgetc (stdin) != 0x7C)
+		{
+			printf ("%c", 0x00);
+			continue;
+		}
+
+		// Address (8 byte)
+		uint8_t addr [8];
+		for (uint16_t index = 0; index < sizeof (addr); ++index)
+			addr [index] = fgetc (stdin);
+
+		// Size (1 byte)
+		uint16_t size = fgetc (stdin) * 4;
+
+		// Data
+		for (uint16_t index = 0; index < size; ++index)
+			txBuffer [index] = fgetc (stdin);
+
+		// Print back
+		for (uint16_t index = 0; index < sizeof (addr); ++index)
+			printf ("%c", addr [index]);
+
+		for (uint16_t index = 0; index < size; ++index)
+			printf ("%c", txBuffer [index]);
 	}
 
 	#endif
