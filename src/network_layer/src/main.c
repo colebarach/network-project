@@ -14,14 +14,19 @@
 
 #define TX_RANDOM			0
 #define RX_ONLY				1
-#define USB_TEST			2
-#define MODE				USB_TEST
+#define USB_TX				2
+#define USB_RX				3
+#define MODE				USB_RX
 
+// Datagram Packaging
+#define ADDRESS_SIZE		8
+
+// Data-link Timing
 #define BAUDRATE			115200
-
 #define FRAME_TIME_US		(11 * 1000000 / BAUDRATE + 1)
-#define INTERFRAME_TIME_US	(FRAME_TIME_US / 8)
+#define INTERFRAME_TIME_US	(FRAME_TIME_US)
 
+// Input / Outputs
 #define UART0_TX			0
 #define UART0_RX			1
 #define UART0_RX_SENSE		2
@@ -35,7 +40,7 @@ void transmitJamFrame ();
 
 bool transmitDatagram (uint8_t* txBuffer, uint16_t txSize);
 
-bool receiveDatagram (uint8_t* rxBuffer, uint16_t rxSize);
+bool receiveDatagram (uint8_t* rxBuffer, uint16_t rxSize, uint16_t* rxCount);
 
 // Core 0 Entrypoint ----------------------------------------------------------------------------------------------------------
 
@@ -52,6 +57,7 @@ int main ()
 	gpio_set_dir (COLLISION_PIN, GPIO_OUT);
 
 	uint8_t txBuffer [1024];
+	uint8_t rxBuffer [1024];
 
 	srand (0);
 
@@ -76,36 +82,53 @@ int main ()
 		sleep_us (2 * FRAME_TIME_US);
 	}
 
-	#elif MODE == USB_TEST
+	#elif MODE == USB_TX
 
 	stdio_init_all ();
 	while (true)
 	{
 		// Command type (1 byte)
 		if (fgetc (stdin) != 0x7C)
-		{
-			printf ("%c", 0x00);
 			continue;
-		}
 
 		// Address (8 byte)
-		uint8_t addr [8];
-		for (uint16_t index = 0; index < sizeof (addr); ++index)
-			addr [index] = fgetc (stdin);
+		uint8_t addr [ADDRESS_SIZE];
+		for (uint16_t index = 0; index < ADDRESS_SIZE; ++index)
+			txBuffer [index] = fgetc (stdin);
 
 		// Size (1 byte)
 		uint16_t size = fgetc (stdin) * 4;
 
 		// Data
-		for (uint16_t index = 0; index < size; ++index)
+		for (uint16_t index = ADDRESS_SIZE; index < size + ADDRESS_SIZE; ++index)
 			txBuffer [index] = fgetc (stdin);
 
-		// Print back
-		for (uint16_t index = 0; index < sizeof (addr); ++index)
-			printf ("%c", addr [index]);
+		transmitDatagram (txBuffer, ADDRESS_SIZE + size);
+	}
 
-		for (uint16_t index = 0; index < size; ++index)
-			printf ("%c", txBuffer [index]);
+	#elif MODE == USB_RX
+
+	stdio_init_all ();
+	while (true)
+	{
+		uint16_t rxCount;
+		if (!receiveDatagram (rxBuffer, sizeof (rxBuffer), &rxCount))
+			continue;
+
+		printf ("%c", 0x7D);
+
+		for (uint8_t index = 0; index < ADDRESS_SIZE; ++index)
+			printf ("%c", rxBuffer [index]);
+
+		printf ("%c", rxCount);
+
+		for (uint8_t index = ADDRESS_SIZE; index < ADDRESS_SIZE + rxCount; ++index)
+			printf ("%c", rxBuffer [index]);
+
+		printf ("%c", 0xAA);
+		printf ("%c", 0xAA);
+		printf ("%c", 0xAA);
+		printf ("%c", 0xAA);
 	}
 
 	#endif
@@ -185,7 +208,7 @@ bool transmitDatagram (uint8_t* txBuffer, uint16_t txSize)
 
 		// Transmit the byte, block until completion
 		uart_write_blocking (uart0, txBuffer + index, 1);
-		sleep_us (FRAME_TIME_US);
+		sleep_us (FRAME_TIME_US + 10);
 
 		// No byte read => collision
 		if (!uart_is_readable (uart0))
@@ -214,7 +237,7 @@ bool transmitDatagram (uint8_t* txBuffer, uint16_t txSize)
 	return true;
 }
 
-bool receiveDatagram (uint8_t* rxBuffer, uint16_t rxSize)
+bool receiveDatagram (uint8_t* rxBuffer, uint16_t rxSize, uint16_t* rxCount)
 {
 	// Debugging pin
 	gpio_put (COLLISION_PIN, false);
@@ -223,11 +246,11 @@ bool receiveDatagram (uint8_t* rxBuffer, uint16_t rxSize)
 	flushReceiveFifo ();
 	while (!uart_is_readable (uart0));
 
-	uint16_t index = 0;
+	*rxCount = 0;
 	while (true)
 	{
 		// If the datagram exceeds the buffer size, fail.
-		if (index >= rxSize)
+		if (*rxCount >= rxSize)
 			return false;
 
 		// If any UART errors occurred, a collision occurred.
@@ -239,8 +262,8 @@ bool receiveDatagram (uint8_t* rxBuffer, uint16_t rxSize)
 		}
 
 		// Read the byte into the buffer
-		rxBuffer [index] = dr;
-		++index;
+		rxBuffer [*rxCount] = dr;
+		++(*rxCount);
 
 		// Wait for the next byte, or timeout
 		uint16_t count = 0;
