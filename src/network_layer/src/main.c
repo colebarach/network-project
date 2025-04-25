@@ -24,7 +24,7 @@
 // Data-link Timing
 #define BAUDRATE			115200
 #define FRAME_TIME_US		(11 * 1000000 / BAUDRATE + 1)
-#define INTERFRAME_TIME_US	(FRAME_TIME_US)
+#define INTERFRAME_TIME_US	(2 * FRAME_TIME_US)
 
 // Input / Outputs
 #define UART0_TX			0
@@ -120,15 +120,10 @@ int main ()
 		for (uint8_t index = 0; index < ADDRESS_SIZE; ++index)
 			printf ("%c", rxBuffer [index]);
 
-		printf ("%c", rxCount);
+		printf ("%c", rxCount - ADDRESS_SIZE);
 
-		for (uint8_t index = ADDRESS_SIZE; index < ADDRESS_SIZE + rxCount; ++index)
+		for (uint8_t index = ADDRESS_SIZE; index < rxCount; ++index)
 			printf ("%c", rxBuffer [index]);
-
-		printf ("%c", 0xAA);
-		printf ("%c", 0xAA);
-		printf ("%c", 0xAA);
-		printf ("%c", 0xAA);
 	}
 
 	#endif
