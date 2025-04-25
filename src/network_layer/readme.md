@@ -2,6 +2,7 @@
 ## Configuration
 - Create a directory named ```build```.
 - From said directory, run ```cmake ..```.
+- To generate debug symbols, use ```cmake -DCMAKE_BUILD_TYPE=Debug ..```
 ## Compilation
 - From the build directory, run ```make```.
 ## Programming
