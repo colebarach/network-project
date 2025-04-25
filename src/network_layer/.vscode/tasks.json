@@ -6,8 +6,7 @@
 			"type": "cmake",
 			"label": "CMake: build",
 			"command": "build",
-			"targets":
-			[
+			"targets": [
 				"all"
 			],
 			"group": "build",
@@ -17,7 +16,8 @@
 		{
 			"label": "Flash",
 			"type": "shell",
-			"command": "openocd -f interface/cmsis-dap.cfg -f target/rp2040.cfg -c \"program build/main.elf verify reset exit\""
+			"command": "openocd -f interface/cmsis-dap.cfg -f target/rp2040.cfg -c \"program build/main.elf verify reset exit\"",
+			"problemMatcher": []
 		}
 	]
 }
