@@ -1,11 +1,16 @@
-<!-- home.html -->
 <!DOCTYPE html>
 <html>
 <head>
     <title>Home Page</title>
 </head>
 <body>
-    <h1>{{ title }}</h1>
-    <p>Welcome to our Website!</p>
+    <div style="position: absolute; top: 20px; right: 20px;">
+        <a href="/main/">
+            <button style="padding: 8px 16px;">Main</button>
+        </a>
+    </div>
+    <h1>Welcome to the Home Page</h1>
+    <p>Data from stdin:</p>
+    <textarea rows="4" cols="50" readonly>{{ piped_data }}</textarea>
 </body>
 </html>
