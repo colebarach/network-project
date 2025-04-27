@@ -9,13 +9,14 @@
 			"request": "launch",
 			"type": "cortex-debug",
 			"servertype": "openocd",
+			"gdbPath": "arm-none-eabi-gdb",
 			"device": "RP2040",
-			"svdFile": ".vscode/rp2040.svd",
 			"configFiles":
 			[
 				"interface/cmsis-dap.cfg",
 				"target/rp2040.cfg"
-			]
+			],
+			"svdFile": ".vscode/rp2040.svd"
 		}
 	]
 }
