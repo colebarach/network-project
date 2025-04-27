@@ -4,6 +4,8 @@
 
 // RPI Pico SDK
 #include "pico/stdlib.h"
+#include "pico/multicore.h"
+#include "pico/sync.h"
 
 // C Standard Library
 #include <stdio.h>
@@ -16,21 +18,28 @@
 #define RX_ONLY				1
 #define USB_TX				2
 #define USB_RX				3
-#define MODE				USB_RX
+#define USB					4
+#define MODE				USB_TX
 
 // Datagram Packaging
+#define DATAGRAM_SIZE		1024
 #define ADDRESS_SIZE		8
 
 // Data-link Timing
-#define BAUDRATE			115200
+#define BAUDRATE			115200 // TODO(Barach): Increase baudrate
 #define FRAME_TIME_US		(11 * 1000000 / BAUDRATE + 1)
-#define INTERFRAME_TIME_US	(2 * FRAME_TIME_US)
+#define INTERFRAME_TIME_US	(FRAME_TIME_US / 2)
 
-// Input / Outputs
+// Inputs / Outputs
 #define UART0_TX			0
 #define UART0_RX			1
 #define UART0_RX_SENSE		2
 #define COLLISION_PIN		3
+
+// Globals --------------------------------------------------------------------------------------------------------------------
+
+mutex_t usbMutex;
+mutex_t uartMutex;
 
 // Functions Prototypes -------------------------------------------------------------------------------------------------------
 
@@ -40,7 +49,9 @@ void transmitJamFrame ();
 
 bool transmitDatagram (uint8_t* txBuffer, uint16_t txSize);
 
-bool receiveDatagram (uint8_t* rxBuffer, uint16_t rxSize, uint16_t* rxCount);
+bool receiveDatagram (uint8_t* data, uint16_t* dataCount);
+
+void main1 ();
 
 // Core 0 Entrypoint ----------------------------------------------------------------------------------------------------------
 
@@ -56,8 +67,11 @@ int main ()
 	gpio_init (COLLISION_PIN);
 	gpio_set_dir (COLLISION_PIN, GPIO_OUT);
 
-	uint8_t txBuffer [1024];
-	uint8_t rxBuffer [1024];
+	uint8_t txBuffer [DATAGRAM_SIZE];
+	uint8_t rxBuffer [DATAGRAM_SIZE];
+
+	mutex_init (&uartMutex);
+	mutex_init (&usbMutex);
 
 	srand (0);
 
@@ -111,19 +125,60 @@ int main ()
 	stdio_init_all ();
 	while (true)
 	{
-		uint16_t rxCount;
-		if (!receiveDatagram (rxBuffer, sizeof (rxBuffer), &rxCount))
+		// Wait until a datagram is received
+		uint16_t dataCount;
+		if (!receiveDatagram (rxBuffer, &dataCount))
 			continue;
 
+		// Send receive response type
 		printf ("%c", 0x7D);
 
+		// Send the address
 		for (uint8_t index = 0; index < ADDRESS_SIZE; ++index)
 			printf ("%c", rxBuffer [index]);
 
-		printf ("%c", rxCount - ADDRESS_SIZE);
+		// Send the payload size
+		uint16_t size = (dataCount - ADDRESS_SIZE) / 4 - 1;
+		printf ("%c", size);
 
-		for (uint8_t index = ADDRESS_SIZE; index < rxCount; ++index)
-			printf ("%c", rxBuffer [index]);
+		// Send the payload
+		for (uint8_t index = 0; index < (size + 1) * 4; ++index)
+			printf ("%c", rxBuffer [index + ADDRESS_SIZE]);
+	}
+
+	#elif MODE == USB
+
+	// Start receive thread
+	multicore_launch_core1 (&main1);
+
+	// Transmit thread
+	stdio_init_all ();
+	while (true)
+	{
+		mutex_enter_blocking (&usbMutex);
+
+			// Command type (1 byte)
+			if (fgetc (stdin) != 0x7C)
+				continue;
+
+			// Address (8 byte)
+			uint8_t addr [ADDRESS_SIZE];
+			for (uint16_t index = 0; index < ADDRESS_SIZE; ++index)
+				txBuffer [index] = fgetc (stdin);
+
+			// Size (1 byte)
+			uint16_t size = fgetc (stdin) * 4;
+
+			// Data
+			for (uint16_t index = ADDRESS_SIZE; index < size + ADDRESS_SIZE; ++index)
+				txBuffer [index] = fgetc (stdin);
+
+		mutex_exit (&usbMutex);
+		mutex_enter_blocking (&uartMutex);
+
+			transmitDatagram (txBuffer, ADDRESS_SIZE + size);
+
+		mutex_exit (&uartMutex);
 	}
 
 	#endif
@@ -131,9 +186,38 @@ int main ()
 
 // Core 1 Entrypoint ----------------------------------------------------------------------------------------------------------
 
-int main1 ()
+void main1 ()
 {
-	while (true) {}
+	uint8_t rxBuffer [DATAGRAM_SIZE];
+
+	while (true)
+	{
+		mutex_enter_blocking (&uartMutex);
+
+			// Wait until a datagram is received
+			uint16_t dataCount;
+			while (!receiveDatagram (rxBuffer, &dataCount));
+
+		mutex_exit (&uartMutex);
+		mutex_enter_blocking (&usbMutex);
+
+			// Send receive response type
+			printf ("%c", 0x7D);
+
+			// Send the address
+			for (uint8_t index = 0; index < ADDRESS_SIZE; ++index)
+				printf ("%c", rxBuffer [index]);
+
+			// Send the payload size
+			uint16_t size = (dataCount - ADDRESS_SIZE) / 4 - 1;
+			printf ("%c", size);
+
+			// Send the payload
+			for (uint8_t index = 0; index < (size + 1) * 4; ++index)
+				printf ("%c", rxBuffer [index + ADDRESS_SIZE]);
+
+		mutex_exit (&usbMutex);
+	}
 }
 
 // Functions ------------------------------------------------------------------------------------------------------------------
@@ -196,6 +280,7 @@ bool transmitDatagram (uint8_t* txBuffer, uint16_t txSize)
 	// Transmit byte by byte, checking for collision.
 	for (uint8_t index = 0; index < txSize; ++index)
 	{
+		// Clear the error register
 		uart_get_hw (uart0)->rsr = 0x00;
 
 		// Empty the UART's RX FIFO
@@ -203,7 +288,7 @@ bool transmitDatagram (uint8_t* txBuffer, uint16_t txSize)
 
 		// Transmit the byte, block until completion
 		uart_write_blocking (uart0, txBuffer + index, 1);
-		sleep_us (FRAME_TIME_US + 10);
+		sleep_us (FRAME_TIME_US + 10); // TODO(Barach): Does this work? Can it be lowered?
 
 		// No byte read => collision
 		if (!uart_is_readable (uart0))
@@ -232,7 +317,7 @@ bool transmitDatagram (uint8_t* txBuffer, uint16_t txSize)
 	return true;
 }
 
-bool receiveDatagram (uint8_t* rxBuffer, uint16_t rxSize, uint16_t* rxCount)
+bool receiveDatagram (uint8_t* data, uint16_t* dataCount)
 {
 	// Debugging pin
 	gpio_put (COLLISION_PIN, false);
@@ -241,11 +326,11 @@ bool receiveDatagram (uint8_t* rxBuffer, uint16_t rxSize, uint16_t* rxCount)
 	flushReceiveFifo ();
 	while (!uart_is_readable (uart0));
 
-	*rxCount = 0;
+	*dataCount = 0;
 	while (true)
 	{
 		// If the datagram exceeds the buffer size, fail.
-		if (*rxCount >= rxSize)
+		if (*dataCount >= DATAGRAM_SIZE + ADDRESS_SIZE)
 			return false;
 
 		// If any UART errors occurred, a collision occurred.
@@ -257,21 +342,26 @@ bool receiveDatagram (uint8_t* rxBuffer, uint16_t rxSize, uint16_t* rxCount)
 		}
 
 		// Read the byte into the buffer
-		rxBuffer [*rxCount] = dr;
-		++(*rxCount);
+		data [*dataCount] = dr;
+		++(*dataCount);
 
 		// Wait for the next byte, or timeout
-		uint16_t count = 0;
+		uint16_t timeout = 0;
 		while (true)
 		{
 			if (uart_is_readable (uart0))
 				break;
 
-			if (count > INTERFRAME_TIME_US)
+			if (timeout > FRAME_TIME_US + INTERFRAME_TIME_US) // TODO(Barach): Does this work?
+			{
+				// Reject malformed datagrams. Require payload size be be a non-zero multiple of 4.
+				// if (*dataCount < ADDRESS_SIZE + 4 || *dataCount % 4 != 0)
+				//	return false;
+
 				return true;
+			}
 
-			++count;
-
+			++timeout;
 			sleep_us (1);
 		}
 	}
