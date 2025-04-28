@@ -1,4 +1,4 @@
 src/network_layer/build/
 src/network_layer/.cache/
-src/network_tool/build/
+src/network_tools/build/
 *.exe

@@ -29,6 +29,14 @@ should be sent. This indicates the remaining length of the command.
 | Size      | 1              | 9              | The size of the payload, in 4 byte blocks.                                    |
 | Frame     | 4 * (Size + 1) | 10             | The frame to transmit.                                                        |
 
+### Address Command
+To set the address of an adapter, the address command should be issued.
+
+| Field     | Size (Bytes)   | Offset (Bytes) | Description                                                                   |
+|-----------|----------------|----------------|-------------------------------------------------------------------------------|
+| Type      | 1              | 0              | The type of the sequence (0x7E for address)                                   |
+| Addr      | 8              | 1              | The address to set.                                                           |
+
 ### Receive Response
 When a frame is received, the receive response is written. The type byte indicates the type of response being issued, and, by
 extension, the format of the response. After the source address, the size of the frame is written. This indicates the

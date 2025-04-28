@@ -10,15 +10,46 @@
 #include <stdint.h>
 #include <string.h>
 
+#define ADDRESS_SIZE 8
+#define DATAGRAM_SIZE 1024
+
+void setAddr (FILE* serial, const char* addr)
+{
+	fputc (0x7E, serial);
+
+	for (uint8_t index = 0; index < ADDRESS_SIZE; ++index)
+		fputc (addr [index], serial);
+}
+
+uint16_t receive (FILE* serial, char* data, char* addr)
+{
+	while (1)
+		if (getc (serial) == 0x7D)
+			break;
+
+	for (uint8_t index = 0; index < 8; ++index)
+		addr [index] = getc (serial);
+
+	uint16_t dataCount = (getc (serial) + 1) * 4;
+
+	for (uint16_t index = 0; index < dataCount; ++index)
+		data [index] = getc (serial);
+
+	return dataCount;
+}
+
 int main (int argc, char** argv)
 {
-	if (argc != 2)
+	if (argc != 3)
 	{
-		fprintf (stderr, "Invalid arguments. Usage: 'rx <serial port name>'.\n");
+		fprintf (stderr, "Invalid arguments. Usage: 'rx <addr> <serial port>'.\n");
 		return -1;
 	}
 
-	const char* serialPath = argv [1];
+	char destAddr [ADDRESS_SIZE] = {};
+	strcpy (destAddr, argv [1]);
+
+	const char* serialPath = argv [2];
 
 	int serial = open (serialPath, O_RDONLY);
 	if (serial < 0)
@@ -80,7 +111,7 @@ int main (int argc, char** argv)
 	close (serial);
 
 	// TODO(Barach): For some reason, this is the only way I can open a serial port properly.
-	FILE* fSerial = fopen (serialPath, "r");
+	FILE* fSerial = fopen (serialPath, "r+");
 	if (fSerial == NULL)
 	{
 		int code = errno;
@@ -88,25 +119,15 @@ int main (int argc, char** argv)
 		return code;
 	}
 
-	uint8_t address [9];
-	char data [1025];
+	char srcAddr [ADDRESS_SIZE + 1];
+	char data [DATAGRAM_SIZE + 1];
 
-	while (1)
-		if (getc (fSerial) == 0x7D)
-			break;
+	setAddr (fSerial, destAddr);
+	receive (fSerial, data, srcAddr);
+	srcAddr [ADDRESS_SIZE] = '\0';
+	data [DATAGRAM_SIZE] = '\0';
 
-	for (uint8_t index = 0; index < 8; ++index)
-		address [index] = getc (fSerial);
-	address [8] = '\0';
-
-	uint8_t size = (getc (fSerial) + 1) * 4;
-
-	for (uint16_t index = 0; index < size; ++index)
-		data [index] = getc (fSerial);
-	data [1024] = '\0';
-
-	printf ("Message: %s\n", data);
-	printf ("From: %s\n", address);
+	printf ("%s: %s\n", srcAddr, data);
 
 	fclose (fSerial);
 }
