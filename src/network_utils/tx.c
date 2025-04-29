@@ -1,34 +1,11 @@
+// Includes
+#include "adapter.h"
+#include "serial.h"
+
 // C Standard Library
 #include <errno.h>
 #include <stdio.h>
-#include <stdint.h>
 #include <string.h>
-
-#define ADDRESS_SIZE 8
-#define DATAGRAM_SIZE 1024
-
-void setAddr (FILE* serial, const char* addr)
-{
-	fputc (0x7E, serial);
-
-	for (uint8_t index = 0; index < ADDRESS_SIZE; ++index)
-		fputc (addr [index], serial);
-}
-
-void transmit (FILE* serial, const char* data, uint16_t dataCount, const char* addr)
-{
-	uint8_t size = (strlen (data) + 1 + 3) / 4 - 1;
-
-	fputc (0x7C, serial);
-
-	for (uint8_t index = 0; index < ADDRESS_SIZE; ++index)
-		fputc (addr [index], serial);
-
-	fputc (size, serial);
-
-	for (uint8_t index = 0; index < (size + 1) * 4; ++index)
-		fputc (data [index], serial);
-}
 
 int main (int argc, char** argv)
 {
@@ -38,29 +15,37 @@ int main (int argc, char** argv)
 		return -1;
 	}
 
+	// Copy the address to a buffer (unused characters must be 0'ed)
 	char srcAddr [ADDRESS_SIZE] = {};
 	strcpy (srcAddr, argv [1]);
 
+	// Copy the address to a buffer (unused characters must be 0'ed)
 	char destAddr [ADDRESS_SIZE] = {};
 	strcpy (destAddr, argv [2]);
 
+	// Open the serial port
 	const char* serialPath = argv [3];
-
-	char data [DATAGRAM_SIZE + 1];
-
-	FILE* fSerial = fopen (serialPath, "w");
-	if (fSerial == NULL)
+	void* serial = serialInit (serialPath);
+	if (serial == NULL)
 	{
 		int code = errno;
 		fprintf (stderr, "Failed to open serial port '%s': %s.\n", serialPath, strerror (code));
 		return code;
 	}
 
+	// Set the device address
+	setAddress (serial, srcAddr);
+
+	// Read the data
+	char data [DATAGRAM_SIZE + 1];
 	fprintf (stderr, "Message: ");
 	fscanf (stdin, "%[^\n]s", data);
 	getc (stdin);
 	data [DATAGRAM_SIZE] = '\0';
 
-	setAddr (fSerial, srcAddr);
-	transmit (fSerial, data, strlen (data), destAddr);
+	// Transmit the datagram
+	transmit (serial, data, strlen (data), destAddr);
+
+	// Close the serial port
+	fclose (serial);
 }

@@ -1,42 +1,11 @@
-// POSIX
-#include <fcntl.h>
-#include <termio.h>
-#include <unistd.h>
-#include <sys/file.h>
+// Includes
+#include "adapter.h"
+#include "serial.h"
 
 // C Standard Library
 #include <errno.h>
 #include <stdio.h>
-#include <stdint.h>
 #include <string.h>
-
-#define ADDRESS_SIZE 8
-#define DATAGRAM_SIZE 1024
-
-void setAddr (FILE* serial, const char* addr)
-{
-	fputc (0x7E, serial);
-
-	for (uint8_t index = 0; index < ADDRESS_SIZE; ++index)
-		fputc (addr [index], serial);
-}
-
-uint16_t receive (FILE* serial, char* data, char* addr)
-{
-	while (1)
-		if (getc (serial) == 0x7D)
-			break;
-
-	for (uint8_t index = 0; index < 8; ++index)
-		addr [index] = getc (serial);
-
-	uint16_t dataCount = (getc (serial) + 1) * 4;
-
-	for (uint16_t index = 0; index < dataCount; ++index)
-		data [index] = getc (serial);
-
-	return dataCount;
-}
 
 int main (int argc, char** argv)
 {
@@ -46,88 +15,33 @@ int main (int argc, char** argv)
 		return -1;
 	}
 
+	// Copy the address to a buffer (unused characters must be 0'ed)
 	char destAddr [ADDRESS_SIZE] = {};
 	strcpy (destAddr, argv [1]);
 
+	// Open the serial port
 	const char* serialPath = argv [2];
-
-	int serial = open (serialPath, O_RDONLY);
-	if (serial < 0)
-	{
-		int code = errno;
-		fprintf(stderr, "Failed to open serial port '%s': %s.\n", serialPath, strerror (code));
-		return code;
-	}
-
-	if (flock (serial, LOCK_EX | LOCK_NB) == -1)
-	{
-		close (serial);
-
-		int code = errno;
-		printf ("Failed to lock serial port '%s': %s.\n", serialPath, strerror (code));
-		return code;
-	}
-
-	struct termios tty;
-	if (tcgetattr (serial, &tty) != 0)
-	{
-		int code = errno;
-		printf ("Failed to get TTY attributes: %s.\n", strerror (errno));
-		return code;
-	}
-
-	tty.c_cflag &= ~PARENB;						// Disable parity
-	tty.c_cflag &= ~CSTOPB;						// One stop bit
-	tty.c_cflag &= ~CSIZE;						// Clear all bits that set the data size
-	tty.c_cflag |= CS8;							// 8 bits per byte
-	tty.c_cflag &= ~CRTSCTS;					// Disable flow control
-	tty.c_cflag |= CREAD | CLOCAL;				// Turn on READ & Ignore control lines
-	tty.c_lflag &= ~ICANON;						// Disable canonical mode
-	tty.c_lflag &= ~ECHO;						// Disable echo
-	tty.c_lflag &= ~ECHOE;						// Disable erasure
-	tty.c_lflag &= ~ECHONL;						// Disable new-line echo
-	tty.c_lflag &= ~ISIG;						// Disable interpretation of INTR, QUIT and SUSP
-	tty.c_iflag &= ~(IXON | IXOFF | IXANY); 	// Turn off s/w flow ctrl
-	tty.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | // Disable any special handling of received bytes
-		ISTRIP | INLCR | IGNCR | ICRNL);
-	tty.c_oflag &= ~OPOST;						// Prevent special interpretation of output bytes (e.g. newline chars)
-	tty.c_oflag &= ~ONLCR;						// Prevent conversion of newline to carriage return/line feed
-
-	tty.c_cc[VMIN] = 1;
-	tty.c_cc[VTIME] = 0;
-
-	cfsetispeed(&tty, B9600);
-	cfsetospeed(&tty, B9600);
-
-	cfmakeraw (&tty);
-
-	if (tcsetattr (serial, TCSANOW, &tty) != 0)
-	{
-		int code = errno;
-		printf("Failed to set TTY attributes: %s.\n", strerror(errno));
-		return code;
-	}
-
-	close (serial);
-
-	// TODO(Barach): For some reason, this is the only way I can open a serial port properly.
-	FILE* fSerial = fopen (serialPath, "r+");
-	if (fSerial == NULL)
+	void* serial = serialInit (serialPath);
+	if (serial == NULL)
 	{
 		int code = errno;
 		fprintf (stderr, "Failed to open serial port '%s': %s.\n", serialPath, strerror (code));
 		return code;
 	}
 
+	// Set the device address
+	setAddress (serial, destAddr);
+
+	// Receive the datagram
 	char srcAddr [ADDRESS_SIZE + 1];
 	char data [DATAGRAM_SIZE + 1];
-
-	setAddr (fSerial, destAddr);
-	receive (fSerial, data, srcAddr);
+	receive (serial, data, srcAddr, -1);
 	srcAddr [ADDRESS_SIZE] = '\0';
 	data [DATAGRAM_SIZE] = '\0';
 
+	// Print the datagram
 	printf ("%s: %s\n", srcAddr, data);
 
-	fclose (fSerial);
+	// Close the serial port
+	fclose (serial);
 }

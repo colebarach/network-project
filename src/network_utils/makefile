@@ -1,9 +1,19 @@
-all: tx rx
+all: build build/tx build/rx build/ping-client build/ping-server
 
-tx: tx.c
-	mkdir -p build
-	gcc tx.c -o build/tx
+COMMON_SRC :=	adapter.c	\
+				serial.c	\
 
-rx: rx.c
+build:
 	mkdir -p build
-	gcc rx.c -o build/rx
+
+build/tx: tx.c $(COMMON_SRC)
+	gcc tx.c $(COMMON_SRC) -o build/tx
+
+build/rx: rx.c $(COMMON_SRC)
+	gcc rx.c $(COMMON_SRC) -o build/rx
+
+build/ping-client: ping_client.c $(COMMON_SRC)
+	gcc ping_client.c $(COMMON_SRC) -o build/ping-client
+
+build/ping-server: ping_server.c $(COMMON_SRC)
+	gcc ping_server.c $(COMMON_SRC) -o build/ping-server
