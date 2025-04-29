@@ -50,7 +50,12 @@ int main (int argc, char** argv)
 		while (1)
 		{
 			char addr [ADDRESS_SIZE];
-			receive (serial, data, addr, -1);
+			if (!receive (serial, data, addr, 5))
+			{
+				printf ("Ping response timed out.\n");
+				return -1;
+			}
+
 			if (strcmp (addr, serverAddr) != 0 || strcmp (data, "ping_response__") != 0)
 				continue;
 

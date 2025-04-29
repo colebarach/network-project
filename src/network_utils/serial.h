@@ -2,8 +2,10 @@
 #define SERIAL_H
 
 // C Standard Library
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <time.h>
 
 /**
  * @brief Opens and initializes a serial port using the operating-system-specific method.
@@ -32,8 +34,9 @@ void serialWrite (void* serial, const void* data, size_t size);
  * @param serial The serial port handler, as returned by @c serialInit .
  * @param data The buffer to read data into.
  * @param size The number of elements to read.
- * @return The number of elements that were actually read. If not equal to size, a timeout or error occurred.
+ * @param timeout The amount of time to time out after.
+ * @return True if all of the data was read, false if a timeout or error occurred.
  */
-size_t serialRead (void* serial, void* data, size_t size);
+bool serialRead (void* serial, void* data, size_t size, time_t timeout);
 
 #endif // SERIAL_H

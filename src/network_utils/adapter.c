@@ -35,33 +35,31 @@ void transmit (void* serial, const void* payload, uint16_t size, const void* des
 
 size_t receive (void* serial, void* payload, char* srcAddr, time_t timeout)
 {
-	time_t deadline = time (NULL) + timeout;
-
-	// Wait until the receive response starts
+	// Wait until the receive response starts.
 	uint8_t type;
 	while (1)
 	{
-		// If the type byte was read, break.
-		if (serialRead (serial, &type, sizeof (type)) != 0 && type == 0x7D)
-			break;
-
-		// Check for timeout.
-		if (timeout != -1 && time (NULL) > deadline)
+		// If the read times out, fail.
+		if (!serialRead (serial, &type, sizeof (type), timeout))
 			return 0;
+
+		if (type == 0x7D)
+			break;
 	}
 
 	// Read the source address.
-	if (serialRead (serial, srcAddr, ADDRESS_SIZE) != ADDRESS_SIZE)
+	if (!serialRead (serial, srcAddr, ADDRESS_SIZE, timeout))
 		return 0;
 
 	// Read the payload size.
 	uint8_t unconvertedSize;
-	if (serialRead (serial, &unconvertedSize, sizeof (unconvertedSize)) != sizeof (unconvertedSize))
+	if (!serialRead (serial, &unconvertedSize, sizeof (unconvertedSize), timeout))
 		return 0;
 	uint16_t size = (unconvertedSize + 1) * 4;
 
-	// Read the payload
-	if (serialRead (serial, payload, size) != size)
+	// Read the payload.
+	if (!serialRead (serial, payload, size, timeout))
 		return 0;
+
 	return size;
 }
