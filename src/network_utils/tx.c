@@ -44,8 +44,8 @@ int main (int argc, char** argv)
 	data [DATAGRAM_SIZE] = '\0';
 
 	// Transmit the datagram
-	transmit (serial, data, strlen (data), destAddr);
+	transmit (serial, data, strlen (data) + 1, destAddr);
 
 	// Close the serial port
-	fclose (serial);
+	serialClose (serial);
 }

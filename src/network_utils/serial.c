@@ -1,6 +1,8 @@
 // Header
 #include "serial.h"
 
+#define DEBUGGING 0
+
 #ifndef _WIN32
 
 // POSIX Implementation -------------------------------------------------------------------------------------------------------
@@ -47,6 +49,7 @@ void* serialInit (const char* port)
 	tty.c_cc[VMIN] = 1;
 	tty.c_cc[VTIME] = 0;
 
+	// Baudrate doesn't matter as this is a CDC device, just setting for thoroughness
 	cfsetispeed(&tty, B9600);
 	cfsetospeed(&tty, B9600);
 
@@ -68,12 +71,32 @@ void serialClose (void* serial)
 
 void serialWrite (void* serial, const void* data, size_t size)
 {
-	fwrite (data, sizeof (data), size, serial);
+	#if DEBUGGING
+	printf ("Write: ");
+	for (uint16_t index = 0; index < size; ++index)
+		printf ("%02X ", ((uint8_t*) data) [index]);
+	printf ("\n");
+	#endif // DEBUGGING
+	fwrite (data, 1, size, serial);
 }
 
 size_t serialRead (void* serial, void* data, size_t size)
 {
-	return fread (data, 1, size, serial);
+	#if DEBUGGING
+	printf ("Read: ");
+	#endif // DEBUGGING
+
+	size_t sizeOut = fread (data, 1, size, serial);
+
+	#if DEBUGGING
+	if (sizeOut == 0)
+		printf ("Timeout.");
+	for (size_t index = 0; index < sizeOut; ++index)
+		printf ("%02X ", ((uint8_t*) data) [index]);
+	printf ("\n");
+	#endif // DEBUGGING
+
+	return sizeOut;
 }
 
 #else

@@ -43,5 +43,5 @@ int main (int argc, char** argv)
 	printf ("%s: %s\n", srcAddr, data);
 
 	// Close the serial port
-	fclose (serial);
+	serialClose (serial);
 }

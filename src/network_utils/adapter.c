@@ -27,10 +27,10 @@ void transmit (void* serial, const void* payload, uint16_t size, const void* des
 
 	// Convert and write the payload size (1 byte).
 	uint8_t convertedSize = (size + 3) / 4 - 1;
-	serialWrite (serial, &convertedSize, sizeof (size));
+	serialWrite (serial, &convertedSize, sizeof (convertedSize));
 
 	// Write the payload. Note that this uses the converted size, not the user-provided size.
-	serialWrite (serial, payload, (size + 1) * 4);
+	serialWrite (serial, payload, (convertedSize + 1) * 4);
 }
 
 size_t receive (void* serial, void* payload, char* srcAddr, time_t timeout)

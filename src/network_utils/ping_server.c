@@ -45,11 +45,11 @@ int main (int argc, char** argv)
 
 		// Deliver a response
 		strcpy (data, "ping_response__");
-		transmit (serial, data, 4, clientAddr);
+		transmit (serial, data, 16, clientAddr);
 
 		printf ("Ping received from: %s\n", clientAddr);
 	}
 
 	// Close the serial port
-	fclose (serial);
+	serialClose (serial);
 }
