@@ -40,7 +40,9 @@ int main (int argc, char** argv)
 	{
 		// Read the data, newline-terminated
 		char data [DATAGRAM_SIZE + 1];
-		fscanf (stdin, "%[^\n]s", data);
+		if (fscanf (stdin, "%[^\n]s", data) != 1)
+			continue;
+
 		getc (stdin);
 		data [DATAGRAM_SIZE] = '\0';
 
