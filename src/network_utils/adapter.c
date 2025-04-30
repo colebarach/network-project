@@ -16,7 +16,7 @@ void setAddress (void* serial, const void* addr)
 	serialWrite (serial, addr, ADDRESS_SIZE);
 }
 
-void transmit (void* serial, const void* payload, uint16_t size, const void* destAddr)
+void transmit (void* serial, const void* payload, size_t size, const void* destAddr)
 {
 	// Write the command type (1 byte).
 	uint8_t type = 0x7C;

@@ -7,6 +7,9 @@
 #include "pico/multicore.h"
 #include "pico/sync.h"
 
+// POSIX Library
+#include <unistd.h>
+
 // C Standard Library
 #include <stdio.h>
 #include <stdlib.h>
@@ -19,9 +22,9 @@
 #define ADDRESS_SIZE		8
 
 // Data-link Timing
-#define BAUDRATE			115200 // TODO(Barach): Increase baudrate
+#define BAUDRATE			921600
 #define FRAME_TIME_US		(11 * 1000000 / BAUDRATE + 1)
-#define INTERFRAME_TIME_US	(FRAME_TIME_US / 2)
+#define INTERFRAME_TIME_US	(FRAME_TIME_US / 4)
 
 // Inputs / Outputs
 #define UART0_TX			0
@@ -97,7 +100,7 @@ int main ()
 				destAddr [index] = fgetc (stdin);
 
 			// Size (1 byte)
-			uint16_t payloadSize = (fgetc (stdin) + 1) * 4;
+			uint16_t payloadSize = ((uint16_t) fgetc (stdin) + 1) * 4;
 
 			// Payload
 			for (uint16_t index = 0; index < payloadSize; ++index)
@@ -137,19 +140,17 @@ void main1 ()
 		mutex_exit (&uartMutex);
 
 		// Send receive response type
-		printf ("%c", 0x7D);
+		putchar_raw (0x7D);
 
 		// Send the source address
-		for (uint16_t index = 0; index < ADDRESS_SIZE; ++index)
-			printf ("%c", srcAddr [index]);
+		write (1, srcAddr, ADDRESS_SIZE);
 
 		// Send the payload size
 		uint8_t size = payloadSize / 4 - 1;
-		printf ("%c", size);
+		putchar_raw (size);
 
 		// Send the payload
-		for (uint16_t index = 0; index < (size + 1) * 4; ++index)
-			printf ("%c", payload [index]);
+		write (1, payload, (size + 1) * 4);
 	}
 }
 
@@ -157,8 +158,8 @@ void main1 ()
 
 void waitForIdle ()
 {
-	// Random CSMA delay, min of 2 frames, max of 10 frames
-	uint16_t delayUs = (rand () % (8 * FRAME_TIME_US)) + 2 * FRAME_TIME_US;
+	// Random CSMA delay, min of 1 frame, max of 9 frames
+	uint16_t delayUs = (rand () % (8 * FRAME_TIME_US)) + FRAME_TIME_US;
 
 	// Block until the bus is idle for the target interval.
 	uint16_t count = 0;
@@ -201,7 +202,7 @@ bool transmitByte (uint8_t data)
 
 	// Transmit the byte, block until completion
 	uart_write_blocking (uart0, &data, sizeof (data));
-	sleep_us (FRAME_TIME_US + 10); // TODO(Barach): Does this work? Can it be lowered?
+	sleep_us (FRAME_TIME_US + INTERFRAME_TIME_US / 2);
 
 	// No byte read => collision
 	if (!uart_is_readable (uart0))
@@ -237,7 +238,7 @@ int receiveByte (uint8_t* data)
 		if (uart_is_readable (uart0))
 			break;
 
-		if (timeout > FRAME_TIME_US + INTERFRAME_TIME_US) // TODO(Barach): Does this work?
+		if (timeout > FRAME_TIME_US + INTERFRAME_TIME_US)
 			return -1;
 
 		++timeout;

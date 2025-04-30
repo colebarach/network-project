@@ -39,7 +39,7 @@ int main (int argc, char** argv)
 
 	struct timespec timeTx, timeRx;
 
-	for (uint8_t index = 0; index < 8; ++index)
+	while (true)
 	{
 		// Send a ping
 		timespec_get(&timeTx, TIME_UTC);
@@ -47,24 +47,33 @@ int main (int argc, char** argv)
 		transmit (serial, data, sizeof (data), serverAddr);
 
 		// Wait for the response
-		while (1)
+		bool received = false;
+		while (true)
 		{
 			char addr [ADDRESS_SIZE];
-			if (!receive (serial, data, addr, 5))
+			if (!receive (serial, data, addr, 2))
+				break;
+
+			if (strcmp (addr, serverAddr) == 0 && strcmp (data, "ping_response__") == 0)
 			{
-				printf ("Ping response timed out.\n");
-				return -1;
+				received = true;
+				timespec_get(&timeRx, TIME_UTC);
+				break;
 			}
-
-			if (strcmp (addr, serverAddr) != 0 || strcmp (data, "ping_response__") != 0)
-				continue;
-
-			timespec_get(&timeRx, TIME_UTC);
-			break;
 		}
 
-		float time = (timeRx.tv_sec - timeTx.tv_sec) + (timeRx.tv_nsec - timeTx.tv_nsec) / 1000000000.0f;
-		printf ("Ping received: Latency of %f ms\n", time * 1000);
+		if (received)
+		{
+			float latency = (timeRx.tv_sec - timeTx.tv_sec) + (timeRx.tv_nsec - timeTx.tv_nsec) / 1000000000.0f;
+			printf ("Ping received: Latency of %f ms\n", latency * 1000);
+		}
+		else
+		{
+			printf ("Ping response timed out.\n");
+		}
+
+		time_t current = time (NULL);
+		while (time(NULL) == current);
 	}
 
 	// Close the serial port

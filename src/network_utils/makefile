@@ -1,4 +1,4 @@
-all: build build/tx build/rx build/ping-client build/ping-server
+all: build build/tx build/rx build/ping-client build/ping-server build/flood-client build/flood-server
 
 COMMON_SRC :=	adapter.c	\
 				serial.c	\
@@ -17,3 +17,9 @@ build/ping-client: ping_client.c $(COMMON_SRC)
 
 build/ping-server: ping_server.c $(COMMON_SRC)
 	gcc ping_server.c $(COMMON_SRC) -o build/ping-server
+
+build/flood-client: flood_client.c $(COMMON_SRC)
+	gcc flood_client.c $(COMMON_SRC) -o build/flood-client
+
+build/flood-server: flood_server.c $(COMMON_SRC)
+	gcc flood_server.c $(COMMON_SRC) -o build/flood-server

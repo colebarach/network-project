@@ -22,7 +22,7 @@ void setAddress (void* serial, const void* addr);
  * @param size The size of the payload. Note that this value will be rounded up to the nearest multiple of 4.
  * @param destAddr The address of the destination adapter.
  */
-void transmit (void* serial, const void* payload, uint16_t size, const void* destAddr);
+void transmit (void* serial, const void* payload, size_t size, const void* destAddr);
 
 /**
  * @brief Receives a datagram from an adapter.

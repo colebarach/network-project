@@ -76,7 +76,7 @@ void serialWrite (void* serial, const void* data, size_t size)
 {
 	#if DEBUGGING
 	printf ("Write: ");
-	for (uint16_t index = 0; index < size; ++index)
+	for (size_t index = 0; index < size; ++index)
 		printf ("%02X ", ((uint8_t*) data) [index]);
 	printf ("\n");
 	#endif // DEBUGGING
