@@ -102,8 +102,11 @@ int main (int argc, char** argv)
 	timespec_get(&timeEnd, TIME_UTC);
 
 	float timeDiff = timeEnd.tv_sec - timeStart.tv_sec + (timeEnd.tv_nsec - timeStart.tv_nsec) / 1000000000.0f;
-	printf ("Sent: %lu packets. Received: %lu packets. Time ellapsed: %f ms.\n", sentCount, receiveCount, timeDiff * 1000.0f);
-	printf ("Effective throughput: %f kbps\n", targetCount * 1024.0f * 8.0f * 2.0f / timeDiff / 1000.0f);
+	size_t sentKibibytes = sentCount * 8;
+	size_t receiveKibibytes = receiveCount * 8;
+	printf ("Sent: %lu packets (%lu KiB).\nReceived: %lu packets (%lu KiB).\nTime ellapsed: %f ms.\n",
+		sentCount, sentKibibytes, receiveCount, receiveKibibytes, timeDiff * 1000.0f);
+	printf ("Effective throughput: %f kbps\n", receiveCount * 1024.0f * 8.0f * 2.0f / timeDiff / 1000.0f);
 
 	// Close the serial port
 	serialClose (serial);

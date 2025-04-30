@@ -3,25 +3,66 @@
 <head>
   <meta charset="UTF-8">
   <title>Send Page</title>
+  <style>
+    .form-container {
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      gap: 20px; /* Space between the input boxes */
+    }
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 180px; /* Set a fixed width for each input box */
+    }
+    label {
+      margin-bottom: 5px;
+    }
+    input {
+      padding: 10px;
+      width: 100%;
+      margin-bottom: 15px;
+    }
+  </style>
 </head>
 <body>
-    <!-- Back Button at the Top Right -->
-    <div style="position: absolute; top: 20px; right: 20px;">
-        <a href="/main/">
-            <button style="padding: 8px 16px;">Back</button>
-        </a>
-    </div>
+  <!-- Back Button at the Top Right -->
+  <div style="position: absolute; top: 20px; right: 20px;">
+    <a href="/main/">
+      <button style="padding: 8px 16px;">Back</button>
+    </a>
+  </div>
 
-    <!-- Page Content -->
-    <h1>This is the Send Page</h1>
-    
-    <!-- Form to Enter Message -->
-    <div style="display: flex; justify-content: center; align-items: center; height: 300px;">
-        <form action="/send/" method="POST" style="text-align: center;">
-            <input type="text" name="message" placeholder="Enter your message" style="padding: 10px; width: 300px; margin-right: 10px;">
-            <button type="submit" style="padding: 10px 20px;">Send</button>
-        </form>
-    </div>
+  <!-- Page Content -->
+  <h1>This is the Send Page</h1>
+
+  <!-- Form to Enter Source Address, Destination Address, and Message -->
+  <div class="form-container">
+    <form action="/send/" method="POST" style="text-align: center; display: flex; gap: 20px;">
+      
+      <!-- Source Address Group -->
+      <div class="input-group">
+        <label for="source_address">Source</label>
+        <input type="text" id="source_address" name="source_address" placeholder="Source address" required>
+      </div>
+
+      <!-- Destination Address Group -->
+      <div class="input-group">
+        <label for="address">Destination</label>
+        <input type="text" id="address" name="address" placeholder="Destination address" required>
+      </div>
+
+      <!-- Message Group -->
+      <div class="input-group">
+        <label for="message">Message</label>
+        <input type="text" id="message" name="message" placeholder="Enter your message" required>
+      </div>
+
+      <!-- Submit Button -->
+      <button type="submit" style="padding: 10px 20px;">Send</button>
+    </form>
+  </div>
 
 </body>
 </html>
