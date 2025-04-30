@@ -9,18 +9,22 @@
 
 int main (int argc, char** argv)
 {
-	if (argc != 3)
+	if (argc != 4)
 	{
-		fprintf (stderr, "Invalid arguments. Usage: 'rx <addr> <serial port>'.\n");
+		fprintf (stderr, "Invalid arguments. Usage: 'rx <src addr> <dest addr> <serial port>'.\n");
 		return -1;
 	}
 
 	// Copy the address to a buffer (unused characters must be 0'ed)
-	char destAddr [ADDRESS_SIZE] = {};
-	strcpy (destAddr, argv [1]);
+	char srcAddr [ADDRESS_SIZE + 1] = {};
+	strcpy (srcAddr, argv [1]);
+
+	// Copy the address to a buffer (unused characters must be 0'ed)
+	char destAddr [ADDRESS_SIZE + 1] = {};
+	strcpy (destAddr, argv [2]);
 
 	// Open the serial port
-	const char* serialPath = argv [2];
+	const char* serialPath = argv [3];
 	void* serial = serialInit (serialPath);
 	if (serial == NULL)
 	{
@@ -32,15 +36,21 @@ int main (int argc, char** argv)
 	// Set the device address
 	setAddress (serial, destAddr);
 
-	// Receive the datagram
-	char srcAddr [ADDRESS_SIZE + 1];
-	char data [DATAGRAM_SIZE + 1];
-	receive (serial, data, srcAddr, -1);
-	srcAddr [ADDRESS_SIZE] = '\0';
-	data [DATAGRAM_SIZE] = '\0';
+	while (true)
+	{
+		// Receive the datagram
+		char addr [ADDRESS_SIZE + 1];
+		char data [DATAGRAM_SIZE + 1];
+		receive (serial, data, addr, -1);
+		data [DATAGRAM_SIZE] = '\0';
 
-	// Print the datagram
-	printf ("%s: %s\n", srcAddr, data);
+		// Ignore datagrams not from the specific source.
+		if (strcmp (srcAddr, addr) != 0)
+			continue;
+
+		// Print the datagram
+		printf ("%s\n", data);
+	}
 
 	// Close the serial port
 	serialClose (serial);

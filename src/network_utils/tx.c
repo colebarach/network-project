@@ -16,11 +16,11 @@ int main (int argc, char** argv)
 	}
 
 	// Copy the address to a buffer (unused characters must be 0'ed)
-	char srcAddr [ADDRESS_SIZE] = {};
+	char srcAddr [ADDRESS_SIZE + 1] = {};
 	strcpy (srcAddr, argv [1]);
 
 	// Copy the address to a buffer (unused characters must be 0'ed)
-	char destAddr [ADDRESS_SIZE] = {};
+	char destAddr [ADDRESS_SIZE + 1] = {};
 	strcpy (destAddr, argv [2]);
 
 	// Open the serial port
@@ -36,15 +36,17 @@ int main (int argc, char** argv)
 	// Set the device address
 	setAddress (serial, srcAddr);
 
-	// Read the data
-	char data [DATAGRAM_SIZE + 1];
-	fprintf (stderr, "Message: ");
-	fscanf (stdin, "%[^\n]s", data);
-	getc (stdin);
-	data [DATAGRAM_SIZE] = '\0';
+	while (true)
+	{
+		// Read the data, newline-terminated
+		char data [DATAGRAM_SIZE + 1];
+		fscanf (stdin, "%[^\n]s", data);
+		getc (stdin);
+		data [DATAGRAM_SIZE] = '\0';
 
-	// Transmit the datagram
-	transmit (serial, data, strlen (data) + 1, destAddr);
+		// Transmit the datagram
+		transmit (serial, data, strlen (data) + 1, destAddr);
+	}
 
 	// Close the serial port
 	serialClose (serial);
