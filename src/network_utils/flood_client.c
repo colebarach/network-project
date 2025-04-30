@@ -11,7 +11,8 @@
 #include <string.h>
 #include <time.h>
 
-size_t count = 0;
+size_t targetCount;
+size_t receiveCount = 0;
 
 void* serial = NULL;
 char serverAddr [ADDRESS_SIZE] = {};
@@ -28,18 +29,18 @@ void* receiveThread (void* arg)
 			return (void*) -1;
 
 		if (strcmp (addr, serverAddr) == 0 && strcmp (payload, "flood_response_") == 0)
-			++count;
+			++receiveCount;
 
-		if (count >= 64)
+		if (receiveCount >= targetCount)
 			return (void*) 0;
 	}
 }
 
 int main (int argc, char** argv)
 {
-	if (argc != 4)
+	if (argc != 5)
 	{
-		fprintf (stderr, "Invalid arguments. Usage: 'flood-client <client addr> <server addr> <serial port>'.\n");
+		fprintf (stderr, "Invalid arguments. Usage: 'flood-client <client addr> <server addr> <packet count> <serial port>'.\n");
 		return -1;
 	}
 
@@ -50,8 +51,11 @@ int main (int argc, char** argv)
 	// Copy the address to a buffer (unused characters must be 0'ed)
 	strcpy (serverAddr, argv [2]);
 
+	// Get the number of packets to use.
+	targetCount = atoi (argv [3]);
+
 	// Open the serial port
-	const char* serialPath = argv [3];
+	const char* serialPath = argv [4];
 	serial = serialInit (serialPath);
 	if (serial == NULL)
 	{
@@ -75,12 +79,12 @@ int main (int argc, char** argv)
 		return code;
 	}
 
-	size_t sendCount;
-	while (count < 64)
+	size_t sentCount = 0;
+	while (receiveCount < targetCount)
 	{
 		char data [1024] = "flood_request__";
 		transmit (serial, data, sizeof (data), serverAddr);
-		++sendCount;
+		++sentCount;
 
 		struct timespec sleepTime = { .tv_sec = 0, .tv_nsec = 35000000 };
 		struct timespec remaining;
@@ -98,7 +102,8 @@ int main (int argc, char** argv)
 	timespec_get(&timeEnd, TIME_UTC);
 
 	float timeDiff = timeEnd.tv_sec - timeStart.tv_sec + (timeEnd.tv_nsec - timeStart.tv_nsec) / 1000000000.0f;
-	printf ("Sent: %lu packets. Received: %lu packets. Time ellapsed: %f ms.\n", sendCount, count, timeDiff * 1000.0f);
+	printf ("Sent: %lu packets. Received: %lu packets. Time ellapsed: %f ms.\n", sentCount, receiveCount, timeDiff * 1000.0f);
+	printf ("Effective throughput: %f kbps\n", targetCount * 1024.0f * 8.0f * 2.0f / timeDiff / 1000.0f);
 
 	// Close the serial port
 	serialClose (serial);
