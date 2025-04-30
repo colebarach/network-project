@@ -296,7 +296,7 @@ bool transmitDatagram (uint8_t* destAddr, uint8_t* payload, uint16_t payloadSize
 			return false;
 
 	// Transmit the payload, checking for collision
-	for (uint8_t index = 0; index < payloadSize; ++index)
+	for (uint16_t index = 0; index < payloadSize; ++index)
 		if (!transmitByte (payload [index]))
 			return false;
 

@@ -47,7 +47,7 @@ int main (int argc, char** argv)
 
 		// Deliver a response
 		strcpy (data, "flood_response_");
-		transmit (serial, data, 252, clientAddr);
+		transmit (serial, data, 1024, clientAddr);
 	}
 
 	// Close the serial port

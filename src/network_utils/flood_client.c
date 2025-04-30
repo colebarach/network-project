@@ -30,8 +30,6 @@ void* receiveThread (void* arg)
 		if (strcmp (addr, serverAddr) == 0 && strcmp (payload, "flood_response_") == 0)
 			++count;
 
-		printf ("Flood response received.\n");
-
 		if (count >= 64)
 			return (void*) 0;
 	}
@@ -77,17 +75,17 @@ int main (int argc, char** argv)
 		return code;
 	}
 
+	size_t sendCount;
 	while (count < 64)
 	{
-		char data [252] = "flood_request__";
+		char data [1024] = "flood_request__";
 		transmit (serial, data, sizeof (data), serverAddr);
+		++sendCount;
 
-		struct timespec sleepTime = { .tv_sec = 0, .tv_nsec = 500000 };
+		struct timespec sleepTime = { .tv_sec = 0, .tv_nsec = 35000000 };
 		struct timespec remaining;
 		nanosleep (&sleepTime, &remaining);
 	}
-
-	printf ("Flood end.\n");
 
 	void* ret;
 	pthread_join (rxThread, &ret);
@@ -100,7 +98,7 @@ int main (int argc, char** argv)
 	timespec_get(&timeEnd, TIME_UTC);
 
 	float timeDiff = timeEnd.tv_sec - timeStart.tv_sec + (timeEnd.tv_nsec - timeStart.tv_nsec) / 1000000000.0f;
-	printf ("Time ellapsed: %f ms.\n", timeDiff * 1000.0f);
+	printf ("Sent: %lu packets. Received: %lu packets. Time ellapsed: %f ms.\n", sendCount, count, timeDiff * 1000.0f);
 
 	// Close the serial port
 	serialClose (serial);
