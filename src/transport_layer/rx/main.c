@@ -23,16 +23,12 @@ int main(int argc, char* argv[])
         fprintf (stderr, "Invalid arguments. Usage: 'rx <src addr> <dest addr> <serial port>'.\n");
 		return -1;
 	}
-    
-    const char* serialPath;
-    strcpy(serialPath, argv[3]);
-    
-    // const char* serialPath = "/dev/ttyS1";
-    void* serial = serialInit(serialPath);
+
+    void* serial = serialInit(argv[3]);
     if (serial == NULL)
     {
         int code = errno;
-        fprintf (stderr, "Failed to open serial port '%s': %s.\n", serialPath, strerror (code));
+        fprintf (stderr, "Failed to open serial port '%s': %s.\n", argv[3], strerror (code));
 		return code;
     }
 
@@ -66,7 +62,7 @@ int main(int argc, char* argv[])
     {
         char src_addr[ADDRESS_SIZE];
         char data[DATAGRAM_SIZE];
-        uint8_t payload_size = receive(serial, data, src_addr, 500); //change the timout to something
+        uint8_t payload_size = receive(serial, data, src_addr, -1); //change the timout to something
 
         if (!strcmp(expected_src_addr, src_addr) && seqNum == data[1])
         {    

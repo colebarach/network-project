@@ -23,16 +23,13 @@ int main(int argc, char* argv[])
         fprintf (stderr, "Invalid arguments. Usage: 'rx <src addr> <dest addr> <serial port>'.\n");
 		return -1;
 	}
-    
-    const char* serialPath;
-    strcpy(serialPath, argv[3]);
 
     // const char* serialPath = "/dev/ttyS1";
-    void* serial = serialInit(serialPath);
+    void* serial = serialInit(argv[3]);
     if (serial == NULL)
     {
         int code = errno;
-        fprintf (stderr, "Failed to open serial port '%s': %s.\n", serialPath, strerror (code));
+        fprintf (stderr, "Failed to open serial port '%s': %s.\n", argv[3], strerror (code));
 		return code;
     }    
 
@@ -56,7 +53,7 @@ int main(int argc, char* argv[])
     {
         char segment[DATAGRAM_SIZE];
 
-        int size = 4;
+        int size = 3;
 
         segment[0] = DATA_CONTROL;
         segment[1] = seqNum;
@@ -65,12 +62,17 @@ int main(int argc, char* argv[])
 
         do
         {
-            segment[size + 4] = getchar();
             size++;
-        } while (segment[size + 4] != '\n' && size < RAWDATA_SIZE);
+            segment[size] = getchar();
+        } while (segment[size] != '\n' && size < RAWDATA_SIZE);
 
+        size++;
         transmit(serial, segment, size, src_addr);
-        seqNum = ++seqNum % 2;
+
+        sleep(1); //temporary sleep
+
+        //get ack here!
+        seqNum = ++seqNum % 2; //only increase seqnum if you have gotten an ack back
 
     }
 
