@@ -50,6 +50,7 @@ int main (int argc, char** argv)
 
 		// Print the datagram
 		printf ("%s\n", data);
+		fflush (stdout);
 	}
 
 	// Close the serial port
