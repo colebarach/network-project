@@ -34,7 +34,7 @@ void serialWrite (void* serial, const void* data, size_t size);
  * @param serial The serial port handler, as returned by @c serialInit .
  * @param data The buffer to read data into.
  * @param size The number of elements to read.
- * @param timeout The amount of time to time out after.
+ * @param timeout The amount of time to time out after, in milliseconds.
  * @return True if all of the data was read, false if a timeout or error occurred.
  */
 bool serialRead (void* serial, void* data, size_t size, time_t timeout);

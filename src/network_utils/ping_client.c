@@ -51,7 +51,7 @@ int main (int argc, char** argv)
 		while (true)
 		{
 			char addr [ADDRESS_SIZE];
-			if (!receive (serial, data, addr, 2))
+			if (receive (serial, data, addr, 1000) != 0)
 				break;
 
 			if (strcmp (addr, serverAddr) == 0 && strcmp (data, "ping_response__") == 0)

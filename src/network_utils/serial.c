@@ -99,7 +99,7 @@ bool serialRead (void* serial, void* data, size_t size, time_t timeout)
 	// Loop until all data has been read in, or a timeout occurred.
 	// TODO(Barach): This timeout is only approximate, should by decreased after each loop by the execution time.
 	size_t index = 0;
-	while (poll (&pollfd, 1, timeout * 1000) == 1)
+	while (poll (&pollfd, 1, timeout) == 1)
 	{
 		#if DEBUGGING
 		printf ("Read: ");
