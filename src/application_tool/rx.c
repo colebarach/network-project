@@ -4,6 +4,7 @@
 #include <unistd.h>   // For sleep()
 
 int main(int argc, char** argv) {
+    while (0==0){
     if (argc > 1) {
         printf("%s\n", argv[1]);  // Correctly print the first argument
     } else {
@@ -21,6 +22,6 @@ int main(int argc, char** argv) {
     printf("RX code paused\n");
     sleep(3);
     printf("RX code finishing\n");
-
+}
     return 0;
 }

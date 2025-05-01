@@ -8,13 +8,13 @@
       display: flex;
       justify-content: center;
       align-items: flex-start;
-      gap: 20px; /* Space between the input boxes */
+      gap: 20px;
     }
     .input-group {
       display: flex;
       flex-direction: column;
       align-items: center;
-      width: 180px; /* Set a fixed width for each input box */
+      width: 180px;
     }
     label {
       margin-bottom: 5px;
@@ -24,9 +24,23 @@
       width: 100%;
       margin-bottom: 15px;
     }
+    .output-section {
+      margin-top: 40px;
+      text-align: center;
+      font-family: monospace;
+    }
+    .output-section pre {
+      background-color: #f4f4f4;
+      padding: 15px;
+      border-radius: 5px;
+      max-width: 800px;
+      margin: 10px auto;
+      overflow-x: auto;
+    }
   </style>
 </head>
 <body>
+
   <!-- Back Button at the Top Right -->
   <div style="position: absolute; top: 20px; right: 20px;">
     <a href="/main/">
@@ -35,7 +49,7 @@
   </div>
 
   <!-- Page Content -->
-  <h1>This is the Send Page</h1>
+  <h1 style="text-align: center;">This is the Send Page</h1>
 
   <!-- Form to Enter Source Address, Destination Address, and Message -->
   <div class="form-container">
@@ -62,6 +76,24 @@
       <!-- Submit Button -->
       <button type="submit" style="padding: 10px 20px;">Send</button>
     </form>
+  </div>
+
+  <!-- Output Display Section -->
+  <div class="output-section">
+    {% if message_sent %}
+      <h2>Message Sent</h2>
+      <pre>{{ message_sent }}</pre>
+    {% endif %}
+
+    {% if tx_output %}
+      <h2>TX Output (stdout)</h2>
+      <pre>{{ tx_output }}</pre>
+    {% endif %}
+
+    {% if tx_error %}
+      <h2>TX Error (stderr)</h2>
+      <pre>{{ tx_error }}</pre>
+    {% endif %}
   </div>
 
 </body>

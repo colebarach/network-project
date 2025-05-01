@@ -1,25 +1,119 @@
-<!--receive-->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <title>Receive Page</title>
+  <style>
+    .form-container {
+      max-width: 600px;
+      margin: 20px auto;
+    }
+    input, button {
+      padding: 10px;
+      margin: 5px;
+    }
+    textarea {
+      width: 100%;
+      height: 300px;
+      padding: 10px;
+      font-family: monospace;
+      background: #f4f4f4;
+      border: 1px solid #ccc;
+      resize: none;
+    }
+  </style>
 </head>
 <body>
-    <!-- Back Button at the Top Right -->
-    <div style="position: absolute; top: 20px; right: 20px;">
-        <a href="/main/">
-            <button style="padding: 8px 16px;">Back</button>
-        </a>
-    </div>
 
-    <!-- Page Content -->
-    <h1>This is the Receive Page</h1>
+  <!-- Back Button at the Top Right -->
+  <div style="position: absolute; top: 20px; right: 20px;">
+    <a href="/main/">
+      <button style="padding: 8px 16px;">Back</button>
+    </a>
+  </div>
 
-    <!-- Text Box Displaying Terminal Input -->
-    <div style="display: flex; justify-content: center; align-items: center; height: 300px;">
-        <textarea rows="4" cols="50" readonly style="padding: 10px;">{{ terminal_data }}</textarea>
-    </div>
+  <!-- Page Content -->
+  <div class="form-container">
+    <h2>Enter Source and Destination</h2>
+    <form method="POST" id="receiveForm">
+      <!-- Source Address Field -->
+      <input type="text" id="source" name="source" placeholder="Source Address" required>
+      <!-- Destination Address Field -->
+      <input type="text" id="destination" name="destination" placeholder="Destination Address" required>
+      <!-- Start Button -->
+      <button type="button" id="startButton" onclick="startReceiving()">Start Receiving</button>
+      <!-- Stop Button -->
+      <button type="button" id="stopButton" onclick="stopReceiving()" disabled>Stop Receiving</button>
+    </form>
+  </div>
+
+  <div class="output-box">
+    <h3>Live Output</h3>
+    <!-- Textarea to display the received message -->
+    <textarea id="output" readonly>No data received yet.</textarea>
+  </div>
+
+  <script>
+    let eventSource = null;
+    let outputElement = document.getElementById("output");
+    let startButton = document.getElementById("startButton");
+    let stopButton = document.getElementById("stopButton");
+
+    function startReceiving() {
+      let source = document.getElementById("source").value;
+      let destination = document.getElementById("destination").value;
+
+      fetch('/start_receive', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ source: source, destination: destination })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          // Enable stop button and disable start button
+          startButton.disabled = true;
+          stopButton.disabled = false;
+          outputElement.value = "Receiving started...\n";
+
+          // Start receiving data from SSE
+          startSSE();
+        } else {
+          outputElement.value = "Error starting receiving: " + data.error;
+        }
+      });
+    }
+
+    function stopReceiving() {
+      fetch('/stop_receive', { method: 'POST' })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          // Disable stop button and enable start button
+          startButton.disabled = false;
+          stopButton.disabled = true;
+          outputElement.value += "\nReceiving stopped.";
+        }
+      });
+    }
+
+    function startSSE() {
+      // Create an EventSource connection to listen for data from the server
+      eventSource = new EventSource('/sse_output');
+
+      // Handle incoming messages from the server (SSE)
+      eventSource.onmessage = function(event) {
+        // Append the received data to the textarea
+        outputElement.value += event.data + "\n";
+        outputElement.scrollTop = outputElement.scrollHeight;  // Auto-scroll
+      };
+
+      // Handle any errors with the SSE connection
+      eventSource.onerror = function() {
+        console.error('Error with SSE connection');
+      };
+    }
+  </script>
 
 </body>
 </html>
