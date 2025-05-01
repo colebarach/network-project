@@ -7,6 +7,8 @@
             "args": [
                 "-fdiagnostics-color=always",
                 "-g",
+                "${fileDirname}/../../network_utils/adapter.c",
+                "${fileDirname}/../../network_utils/serial.c",
                 "${file}",
                 "-o",
                 "${fileDirname}/${fileBasenameNoExtension}"
