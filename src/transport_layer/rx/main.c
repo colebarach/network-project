@@ -18,9 +18,9 @@
 //program to write to serial port
 int main(int argc, char* argv[])
 {
-	if (argc != 3)
+	if (argc != 4)
 	{
-		fprintf (stderr, "Invalid arguments. Usage: 'rx <addr> <serial port>'.\n");
+        fprintf (stderr, "Invalid arguments. Usage: 'rx <src addr> <dest addr> <serial port>'.\n");
 		return -1;
 	}
     
@@ -40,18 +40,14 @@ int main(int argc, char* argv[])
 
 
     //argv[1] is the destination name of whatever we're reading from
-    char dest_addr[8];
+    char dest_addr[ADDRESS_SIZE + 1] = {};
     strcpy (dest_addr, argv [2]);
 
-    dest_addr[8] = '\0';
     // Set the device address
 	setAddress (serial, dest_addr);
 
-    
-    char expected_src_addr[8];
+    char expected_src_addr[ADDRESS_SIZE + 1] = {};
     strcpy(expected_src_addr, argv[1]);
-
-    expected_src_addr[8] = '\0';
 
     //temporary, should implement the maxseqnum function. This is assuming RWS = SWS = 1
     const int RWS = 1;

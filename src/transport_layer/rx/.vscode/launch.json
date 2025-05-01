@@ -9,7 +9,10 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/${fileBasenameNoExtension}",
-            "args": [],
+            "args": [
+                ".......",
+                "sigma",
+                "/dev/ttyS1"],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",
             "environment": [],
