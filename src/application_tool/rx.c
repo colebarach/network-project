@@ -21,6 +21,7 @@ int main(int argc, char** argv) {
 
     printf("RX code paused\n");
     sleep(3);
+    fflush(stdout);
     printf("RX code finishing\n");
 }
     return 0;

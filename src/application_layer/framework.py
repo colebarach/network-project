@@ -7,6 +7,7 @@ app.secret_key = secrets.token_hex(16)  # Set a secret key for sessions
 
 rx_process = None
 rx_output = []
+rx_lock = threading.Lock()
 
 @app.route('/')
 def home():
@@ -60,76 +61,62 @@ def send():
         message_sent=message_sent
     )
 
+def run_rx(source, destination, serial_port):
+    global rx_process, rx_output
+    try:
+        rx_output.clear()
+        rx_process = subprocess.Popen(
+            ['../network_utils/build/rx', source, destination, serial_port],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+
+        for line in rx_process.stdout:
+            with rx_lock:
+                rx_output.append(line.strip())
+
+    except Exception as e:
+        with rx_lock:
+            rx_output.append(f"Error: {str(e)}")
+    finally:
+        rx_process = None
 
 
 @app.route('/receive/', methods=['GET', 'POST'])
 def receive():
-    return render_template('receive.html')
-
-@app.route('/start_receive', methods=['POST'])
-def start_receive():
     global rx_process
-    global rx_output
 
-    data = request.get_json()
-    source = data.get('source')
-    destination = data.get('destination')
+    source = destination = ""
+    error = None
 
-    if not source or not destination:
-        return jsonify({'success': False, 'error': 'Source and destination are required.'})
+    if request.method == 'POST':
+        source = request.form.get('source')
+        destination = request.form.get('destination')
+        action = request.form.get('action')
+        serial_port = '/dev/ttyACM1'
 
-    # Start the rx process in the background
-    def run_rx():
-        global rx_process
-        global rx_output
+        if not source or not destination:
+            error = "Source and destination are required."
+        elif action == 'start':
+            if rx_process is None:
+                thread = threading.Thread(target=run_rx, args=(source, destination, serial_port), daemon=True)
+                thread.start()
+            else:
+                error = "Receiver already running."
+        elif action == 'stop':
+            if rx_process:
+                rx_process.terminate()
+                rx_process = None
+            else:
+                error = "No receiver is running."
 
-        # Define the rx command
-        cmd = ['../application_tool/build/rx', source, destination, '/dev/ttyACM0']
-        
-        try:
-            rx_process = subprocess.Popen(
-                cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
-            )
-            
-            # Continuously read from stdout and add data to rx_output
-            while True:
-                output = rx_process.stdout.readline()
-                if output == '' and rx_process.poll() is not None:
-                    break
-                if output:
-                    # Append new output to rx_output
-                    rx_output.append(output.strip())
-                time.sleep(0.1)  # Sleep to avoid high CPU usage during waiting
-        except Exception as e:
-            print(f"Error running rx: {e}")
-        
-        # Close stdout when done
-        rx_process.stdout.close()
+    return render_template('receive.html', source=source, destination=destination, error=error)
 
-    # Start rx in a separate thread
-    threading.Thread(target=run_rx, daemon=True).start()
-
-    return jsonify({'success': True})
-
-@app.route('/stop_receive', methods=['POST'])
-def stop_receive():
-    global rx_process
-    if rx_process:
-        rx_process.terminate()  # Terminate the rx process
-        rx_process = None
-    return jsonify({'success': True})
-
-@app.route('/sse_output')
-def sse_output():
-    def generate():
-        global rx_output
-        while True:
-            if rx_output:
-                message = rx_output.pop(0)  # Get the first message in the output list
-                yield f"data: {message}\n\n"  # SSE format
-            time.sleep(0.1)  # Sleep to avoid high CPU usage during waiting
-
-    return Response(generate(), mimetype='text/event-stream')
+@app.route('/receive/output')
+def receive_output():
+    with rx_lock:
+        return jsonify({'output': '\n'.join(rx_output)})
 
 if __name__ == '__main__':
     app.run(debug=True)

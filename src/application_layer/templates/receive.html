@@ -4,115 +4,117 @@
   <meta charset="UTF-8">
   <title>Receive Page</title>
   <style>
+    body { font-family: Arial, sans-serif; }
     .form-container {
-      max-width: 600px;
-      margin: 20px auto;
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-top: 40px;
     }
-    input, button {
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 180px;
+    }
+    input {
       padding: 10px;
-      margin: 5px;
-    }
-    textarea {
       width: 100%;
-      height: 300px;
-      padding: 10px;
+      margin-bottom: 15px;
+    }
+    .result-container {
+      text-align: center;
+      margin-top: 40px;
+    }
+    .message-box {
+      background-color: #f4f4f4;
+      padding: 15px;
+      border-radius: 5px;
+      max-width: 600px;
+      margin: 0 auto;
       font-family: monospace;
-      background: #f4f4f4;
-      border: 1px solid #ccc;
-      resize: none;
+      white-space: pre-wrap;
+      height: 300px;
+      overflow-y: scroll;
+    }
+    .error-box {
+      color: red;
+      margin-top: 30px;
+      text-align: center;
+    }
+    .buttons {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin-top: 10px;
+    }
+    button {
+      padding: 10px 20px;
     }
   </style>
 </head>
 <body>
 
-  <!-- Back Button at the Top Right -->
   <div style="position: absolute; top: 20px; right: 20px;">
-    <a href="/main/">
-      <button style="padding: 8px 16px;">Back</button>
-    </a>
+    <a href="/main/"><button>Back</button></a>
   </div>
 
-  <!-- Page Content -->
-  <div class="form-container">
-    <h2>Enter Source and Destination</h2>
-    <form method="POST" id="receiveForm">
-      <!-- Source Address Field -->
-      <input type="text" id="source" name="source" placeholder="Source Address" required>
-      <!-- Destination Address Field -->
-      <input type="text" id="destination" name="destination" placeholder="Destination Address" required>
-      <!-- Start Button -->
-      <button type="button" id="startButton" onclick="startReceiving()">Start Receiving</button>
-      <!-- Stop Button -->
-      <button type="button" id="stopButton" onclick="stopReceiving()" disabled>Stop Receiving</button>
-    </form>
+  <h1 style="text-align: center;">Receive a Message</h1>
+
+  <form action="/receive/" method="POST" id="rx-form">
+    <div class="form-container">
+      <div class="input-group">
+        <label for="source">Source</label>
+        <input type="text" name="source" id="source" value="{{ source }}" required>
+      </div>
+      <div class="input-group">
+        <label for="destination">Destination</label>
+        <input type="text" name="destination" id="destination" value="{{ destination }}" required>
+      </div>
+    </div>
+
+    <div class="buttons">
+      <button type="submit" name="action" value="start" id="start-btn">Start</button>
+      <button type="submit" name="action" value="stop">Stop</button>
+    </div>
+  </form>
+
+  <div class="result-container">
+    <h2>Received Message</h2>
+    <div class="message-box" id="message-box">(Waiting for messages...)</div>
   </div>
 
-  <div class="output-box">
-    <h3>Live Output</h3>
-    <!-- Textarea to display the received message -->
-    <textarea id="output" readonly>No data received yet.</textarea>
-  </div>
+  {% if error %}
+    <div class="error-box">
+      <h3>Error</h3>
+      <pre>{{ error }}</pre>
+    </div>
+  {% endif %}
 
   <script>
-    let eventSource = null;
-    let outputElement = document.getElementById("output");
-    let startButton = document.getElementById("startButton");
-    let stopButton = document.getElementById("stopButton");
+    let polling = false;
 
-    function startReceiving() {
-      let source = document.getElementById("source").value;
-      let destination = document.getElementById("destination").value;
+    // Check if we should start polling after form submission
+    document.getElementById('rx-form').addEventListener('submit', function (e) {
+      const action = document.activeElement.value;
+      if (action === 'start') {
+        polling = true;
+      } else if (action === 'stop') {
+        polling = false;
+      }
+    });
 
-      fetch('/start_receive', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ source: source, destination: destination })
+    // Polling function to fetch output every 2 seconds
+    function pollOutput() {
+    fetch('/receive/output')
+      .then(response => response.json())
+      .then(data => {
+        document.getElementById('message-box').textContent = data.output || "(No data yet)";
       })
-      .then(response => response.json())
-      .then(data => {
-        if (data.success) {
-          // Enable stop button and disable start button
-          startButton.disabled = true;
-          stopButton.disabled = false;
-          outputElement.value = "Receiving started...\n";
+      .catch(err => console.error("Polling error:", err));
+  }
 
-          // Start receiving data from SSE
-          startSSE();
-        } else {
-          outputElement.value = "Error starting receiving: " + data.error;
-        }
-      });
-    }
-
-    function stopReceiving() {
-      fetch('/stop_receive', { method: 'POST' })
-      .then(response => response.json())
-      .then(data => {
-        if (data.success) {
-          // Disable stop button and enable start button
-          startButton.disabled = false;
-          stopButton.disabled = true;
-          outputElement.value += "\nReceiving stopped.";
-        }
-      });
-    }
-
-    function startSSE() {
-      // Create an EventSource connection to listen for data from the server
-      eventSource = new EventSource('/sse_output');
-
-      // Handle incoming messages from the server (SSE)
-      eventSource.onmessage = function(event) {
-        // Append the received data to the textarea
-        outputElement.value += event.data + "\n";
-        outputElement.scrollTop = outputElement.scrollHeight;  // Auto-scroll
-      };
-
-      // Handle any errors with the SSE connection
-      eventSource.onerror = function() {
-        console.error('Error with SSE connection');
-      };
-    }
+    setInterval(pollOutput, 2000);
   </script>
 
 </body>
