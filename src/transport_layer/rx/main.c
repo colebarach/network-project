@@ -60,17 +60,15 @@ int main(int argc, char* argv[])
     // }
 
     //my sliding window number starts at 0
-    int currentNumber = 0;
+    int seqNum = 0;
     
     while(1)
     {
-        char src_addr[ADDRESS_SIZE + 1];
-        char data[DATAGRAM_SIZE + 1];
+        char src_addr[ADDRESS_SIZE];
+        char data[DATAGRAM_SIZE];
         uint8_t payload_size = receive(serial, data, src_addr, 500); //change the timout to something
-        src_addr[ADDRESS_SIZE] = '\0';
-        data[DATAGRAM_SIZE] = '\0';
 
-        if (!strcmp(expected_src_addr, src_addr) && currentNumber == data[1])
+        if (!strcmp(expected_src_addr, src_addr) && seqNum == data[1])
         {    
             //don't forget to use the src_addr somehow. Probably just giving it back to the network layer but also we need to keep track maybe to know
             //which sliding window to use.
@@ -83,22 +81,20 @@ int main(int argc, char* argv[])
             int internet_checksum = data[3 & 0b00111111];
         
             char payload[payload_size];
-            for (int i = 0; i < payload_size; i++) //each iteration is another byte
-            {
-                payload[i] = data[4 + i];
-                putchar(payload[i]); //putting data into stdout
-            }
+
+            fwrite(payload, 1, payload_size, stdout);
+            fflush(stdout);
 
             //check the internet checksum here
 
             //make ack packet
-            ack_segment[1] = currentNumber;
+            ack_segment[1] = seqNum;
 
 
             //internet checksum goes here
 
             transmit(serial, ack_segment, 4, expected_src_addr);
-            currentNumber = ++currentNumber % 2;
+            seqNum = ++seqNum % 2;
         }
     }
 

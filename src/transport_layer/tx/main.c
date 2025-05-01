@@ -1,17 +1,78 @@
+// Includes
+#include "/home/joshuat/network-project/src/network_utils/adapter.h"
+#include "/home/joshuat/network-project/src/network_utils/serial.h"
+
 #include <stdio.h>
 #include <stdlib.h>
-// #include <fcntl.h>
-#include <io.h>
+#include <stdint.h>
+#include <string.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <termios.h>
+#include <unistd.h>
+#include <sys/file.h>
+
+#define DATA_CONTROL 0x69
+#define ACK_CONTROL 0x6A
+#define RAWDATA_SIZE 1020
 
 int main(int argc, char* argv[])
 {
-    char write_dest[40] = argv[1];
+    if (argc != 4)
+	{
+        fprintf (stderr, "Invalid arguments. Usage: 'rx <src addr> <dest addr> <serial port>'.\n");
+		return -1;
+	}
     
+    const char* serialPath;
+    strcpy(serialPath, argv[3]);
+
+    // const char* serialPath = "/dev/ttyS1";
+    void* serial = serialInit(serialPath);
+    if (serial == NULL)
+    {
+        int code = errno;
+        fprintf (stderr, "Failed to open serial port '%s': %s.\n", serialPath, strerror (code));
+		return code;
+    }    
+
+    //argv[1] is the destination name of whatever we're reading from
+    char dest_addr[ADDRESS_SIZE + 1] = {};
+    strcpy (dest_addr, argv [2]);
+
+    // Set the device address
+    setAddress (serial, dest_addr);
+
+    char src_addr[ADDRESS_SIZE + 1] = {};
+    strcpy(src_addr, argv[1]);
     
+    //temporary, should implement the maxseqnum function. This is assuming RWS = SWS = 1
+    const int RWS = 1;
+    const int maxSeqNum = 2;
 
-    printf("sigma"); //can use this for stdout
+    uint8_t seqNum = 0;
 
+    while(1)
+    {
+        char segment[DATAGRAM_SIZE];
 
-    // _dup2();
+        int size = 4;
+
+        segment[0] = DATA_CONTROL;
+        segment[1] = seqNum;
+        segment[2] = size >> 2;
+        segment[3] = ((size && 0b0000000011) << 6) + 0b001111; //checksum here, just too lazy to implement it yet
+
+        do
+        {
+            segment[size + 4] = getchar();
+            size++;
+        } while (segment[size + 4] != '\n' && size < RAWDATA_SIZE);
+
+        transmit(serial, segment, size, src_addr);
+        seqNum = ++seqNum % 2;
+
+    }
+
     return 0;
 }
