@@ -43,21 +43,26 @@ void* serialInit (const char* port)
 	tty.c_lflag &= ~ECHONL;						// Disable new-line echo
 	tty.c_lflag &= ~ISIG;						// Disable interpretation of INTR, QUIT and SUSP
 
-	tty.c_iflag &= ~(IXON | IXOFF | IXANY); 	// Turn off s/w flow ctrl
-	tty.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | // Disable any special handling of received bytes
-		ISTRIP | INLCR | IGNCR | ICRNL);
+	tty.c_iflag &= ~IXON;
+	tty.c_iflag &= ~IXOFF;
+	tty.c_iflag &= ~IXANY;
+	tty.c_iflag |= IGNBRK;
+	tty.c_iflag &= ~BRKINT;
+	tty.c_iflag &= ~PARMRK;
+	tty.c_iflag &= ~ISTRIP;
+	tty.c_iflag &= ~INLCR;
+	tty.c_iflag |= IGNCR;
+	tty.c_iflag &= ~ICRNL;
 
 	tty.c_oflag &= ~OPOST;						// Prevent special interpretation of output bytes (e.g. newline chars)
 	tty.c_oflag &= ~ONLCR;						// Prevent conversion of newline to carriage return/line feed
+	tty.c_oflag &= ~OCRNL;
+	tty.c_oflag &= ~ONLRET;
+	tty.c_oflag |= ONOCR;
 
 	tty.c_cc[VTIME] = 0;
 	tty.c_cc[VMIN] = 0;
-
-	// Baudrate doesn't matter as this is a CDC device, just setting for thoroughness
-	cfsetispeed(&tty, B9600);
-	cfsetospeed(&tty, B9600);
-
-	cfmakeraw (&tty);
+	tty.c_cflag |= CS8;
 
 	if (tcsetattr (fd, TCSANOW, &tty) != 0)
 		return NULL;
