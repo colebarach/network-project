@@ -31,7 +31,7 @@ int main(int argc, char* argv[])
         int code = errno;
         fprintf (stderr, "Failed to open serial port '%s': %s.\n", argv[3], strerror (code));
 		return code;
-    }    
+    }
 
     //argv[1] is the destination name of whatever we're reading from
     char dest_addr[ADDRESS_SIZE + 1] = {};
@@ -42,7 +42,7 @@ int main(int argc, char* argv[])
 
     // Set the device address
     setAddress (serial, src_addr);
-    
+
     //temporary, should implement the maxseqnum function. This is assuming RWS = SWS = 1
     const int RWS = 1;
     const int maxSeqNum = 2;
@@ -55,21 +55,21 @@ int main(int argc, char* argv[])
     {
         uint8_t segment[DATAGRAM_SIZE];
 
-        int size = 3;
+        size_t size = 0;
 
         segment[0] = DATA_CONTROL;
         segment[1] = seqNum;
 
-        do
+        for (; size < RAWDATA_SIZE; ++size)
         {
-            size++;
-            segment[size] = getchar();
-        } while (segment[size] != '\n' && size < RAWDATA_SIZE);
-
-        size++;
+            segment[size + 4] = getchar();
+            if (segment [size + 4] == '\n')
+                break;
+        }
+        ++size;
 
         // segment[2] = size >> 2;
-        segment[2] = size - 4;
+        segment[2] = size;
         segment[3] = (size >> 8) | 0b11110000; //checksum here, just too lazy to implement it yet. checksum is 0b1111 but put on the upper 4 bits
 
         // sleep(1); //temporary sleep
@@ -77,11 +77,12 @@ int main(int argc, char* argv[])
         int failedattempts = 0;
         while(1)
         {
-            transmit(serial, segment, size, dest_addr);
-            char reported_dest_addr[ADDRESS_SIZE];
+            transmit(serial, segment, size + 4, dest_addr);
+            char reported_dest_addr[ADDRESS_SIZE + 1];
             char data[DATAGRAM_SIZE];
-            uint8_t payload_size = receive(serial, data, reported_dest_addr, 50); //change the timout to something
-            if (!strcmp(reported_dest_addr, dest_addr) && seqNum == data[1] && data[0] == ACK_CONTROL && payload_size == 4)
+            size_t ackSize = receive(serial, data, reported_dest_addr, 50); //change the timout to something
+            reported_dest_addr [ADDRESS_SIZE] = '\0';
+            if (!strcmp(reported_dest_addr, dest_addr) && seqNum == data[1] && data[0] == ACK_CONTROL && ackSize == 4)
             {
                 //do internet checksum
                 break;
@@ -93,7 +94,7 @@ int main(int argc, char* argv[])
                     fprintf(stderr, "Failed to transmit: Too many transmission attempts made. Number of attempted transmissions: %i\n", failedattempts);
                     return -1;
                 }
-            }            
+            }
         }
 
         //get ack here! transmit again if ack doesn't happen
