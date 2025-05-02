@@ -5,7 +5,7 @@ Segment Format:
 | Seq Num   | 8             | 8              | Frame sequence number, used for ARQ.                                                |
 | Size      | 10            | 16             | The size of the payload, in bytes.                                                  |
 | Checksum  | 6             | 26             | Internet checksum to verify data integrity (ignore first two most significant bits?)|
-| Payload   | 4 * Size      | 32             | The data of the frame.                                                              |
+| Payload   | Size          | 32             | The data of the frame.                                                              |
 
 Control Byte Types:
 0x69:Data Segment

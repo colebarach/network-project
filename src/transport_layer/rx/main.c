@@ -60,11 +60,11 @@ int main(int argc, char* argv[])
     
     while(1)
     {
-        char src_addr[ADDRESS_SIZE];
-        char data[DATAGRAM_SIZE];
+        unsigned char src_addr[ADDRESS_SIZE];
+        uint8_t data[DATAGRAM_SIZE];
         uint8_t payload_size = receive(serial, data, src_addr, -1); //change the timout to something
 
-        if (!strcmp(expected_src_addr, src_addr) && seqNum == data[1])
+        if (!strcmp(expected_src_addr, src_addr) && seqNum == data[1] && payload_size != 0)
         {    
             //don't forget to use the src_addr somehow. Probably just giving it back to the network layer but also we need to keep track maybe to know
             //which sliding window to use.
@@ -73,17 +73,48 @@ int main(int argc, char* argv[])
             int control = data[0];
             int seqnum = data[1];
         
-            int payload_size = (data[2] << 2) + (data[3] & 0b11000000);
-            int internet_checksum = data[3 & 0b00111111];
+            //these two are stored in a little endian fashion.
+            int payload_size = data[2] | (data[3] & 0b11) << 8;
+            int internet_checksum = (data[3] & 0b11110000) >> 4;
         
+            
             char payload[payload_size];
+
+            memcpy(payload, &data[4], payload_size * sizeof(int));
 
             fwrite(payload, 1, payload_size, stdout);
             fflush(stdout);
 
-            //check the internet checksum here
+            
+            
+            // uint8_t calculated_checksum = control + seqnum;
+            
+            // if (calculated_checksum > 0b1111)
+            // {
+            //     calculated_checksum = (calculated_checksum & 0b01111) + 1;
+            // }
+            // calculated_checksum += data[2];
+            // if (calculated_checksum > 0b1111)
+            // {
+            //     calculated_checksum = (calculated_checksum & 0b01111) + 1;
+            // }
+            // calculated_checksum += (data[3] & 0b1111);
+            // if (calculated_checksum > 0b1111)
+            // {
+            //     calculated_checksum = (calculated_checksum & 0b1111) + 1;
+            // }
+            // for (int i = 4; i < payload_size + 4; i++)
+            // {
+            //     calculated_checksum += data[i];
+            //     if (calculated_checksum > 0b1111)
+            //     {
+            //         calculated_checksum = (calculated_checksum & 0b1111) + 1;
+            //     }
+            // }
 
             //make ack packet
+
+
             ack_segment[1] = seqNum;
 
 
@@ -91,6 +122,10 @@ int main(int argc, char* argv[])
 
             transmit(serial, ack_segment, 4, expected_src_addr);
             seqNum = ++seqNum % 2;
+        }
+        else if (!strcmp(expected_src_addr, src_addr) && seqNum != data[1] && payload_size != 0)
+        {
+            transmit(serial, ack_segment, 4, expected_src_addr);
         }
     }
 
