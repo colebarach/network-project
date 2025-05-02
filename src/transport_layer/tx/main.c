@@ -1,6 +1,6 @@
 // Includes
-#include "/home/joshuat/network-project/src/network_utils/adapter.h"
-#include "/home/joshuat/network-project/src/network_utils/serial.h"
+#include "../../network_utils/adapter.h"
+#include "../../network_utils/serial.h"
 
 #include <stdio.h>
 #include <stdlib.h>
