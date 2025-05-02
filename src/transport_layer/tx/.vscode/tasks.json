@@ -11,7 +11,7 @@
                 "${fileDirname}/../../network_utils/serial.c",
                 "${file}",
                 "-o",
-                "${fileDirname}/${fileBasenameNoExtension}"
+                "${fileDirname}/../build/tx"
             ],
             "options": {
                 "cwd": "${fileDirname}"

@@ -32,8 +32,6 @@ int main(int argc, char* argv[])
 		return code;
     }
 
-    int ack_segment[4] = {ACK_CONTROL, 0, 0, 0};
-
 
     //argv[1] is the destination name of whatever we're reading from
     char dest_addr[ADDRESS_SIZE + 1] = {};
@@ -63,6 +61,7 @@ int main(int argc, char* argv[])
         unsigned char src_addr[ADDRESS_SIZE];
         uint8_t data[DATAGRAM_SIZE];
         uint8_t payload_size = receive(serial, data, src_addr, -1); //change the timout to something
+        uint8_t ack_segment[4] = {ACK_CONTROL, 0, 0, 0};
 
         if (!strcmp(expected_src_addr, src_addr) && seqNum == data[1] && payload_size != 0)
         {    
@@ -71,7 +70,7 @@ int main(int argc, char* argv[])
             //this next part is the parsing the transport layer segment contained in the data
         
             int control = data[0];
-            int seqnum = data[1];
+            int receivedSeqNum = data[1];
         
             //these two are stored in a little endian fashion.
             int payload_size = data[2] | (data[3] & 0b11) << 8;
@@ -114,8 +113,7 @@ int main(int argc, char* argv[])
 
             //make ack packet
 
-
-            ack_segment[1] = seqNum;
+            ack_segment[1] = receivedSeqNum;
 
 
             //internet checksum goes here
