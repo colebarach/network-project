@@ -41,44 +41,44 @@
 </head>
 <body>
 
-  <!-- Back Button at the Top Right -->
+  <!-- Back Button -->
   <div style="position: absolute; top: 20px; right: 20px;">
     <a href="/main/">
       <button style="padding: 8px 16px;">Back</button>
     </a>
   </div>
 
-  <!-- Page Content -->
-  <h1 style="text-align: center;">This is the Send Page</h1>
+  <h1 style="text-align: center;">Send a Message</h1>
 
-  <!-- Form to Enter Source Address, Destination Address, and Message -->
   <div class="form-container">
     <form action="/send/" method="POST" style="text-align: center; display: flex; gap: 20px;">
       
-      <!-- Source Address Group -->
       <div class="input-group">
         <label for="source_address">Source</label>
-        <input type="text" id="source_address" name="source_address" placeholder="Source address" required>
+        <input type="text" id="source_address" name="source_address" value="{{ source_address }}" placeholder="Source address" required>
       </div>
 
-      <!-- Destination Address Group -->
       <div class="input-group">
-        <label for="address">Destination</label>
-        <input type="text" id="address" name="address" placeholder="Destination address" required>
+        <label for="destination_address">Destination</label>
+        <input type="text" id="destination_address" name="destination_address" value="{{ destination_address }}" placeholder="Destination address" required>
       </div>
 
-      <!-- Message Group -->
+      <div class="input-group">
+        <label for="serial_port">Serial Port</label>
+        <input type="text" id="serial_port" name="serial_port" value="{{ serial_port }}" placeholder="Serial Port" required>
+      </div>
+
       <div class="input-group">
         <label for="message">Message</label>
-        <input type="text" id="message" name="message" placeholder="Enter your message" required>
+        <input type="text" id="message" name="message" value="{{ message }}" placeholder="Enter your message" required>
       </div>
 
-      <!-- Submit Button -->
-      <button type="submit" style="padding: 10px 20px;">Send</button>
+      <div class="input-group" style="margin-top: 22px;">
+        <button type="submit" style="padding: 10px 20px;">Send</button>
+      </div>
     </form>
   </div>
 
-  <!-- Output Display Section -->
   <div class="output-section">
     {% if message_sent %}
       <h2>Message Sent</h2>

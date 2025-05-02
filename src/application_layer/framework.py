@@ -29,18 +29,23 @@ def send():
     tx_output = ""
     tx_error = ""
     message_sent = ""
+    source_address = ""
+    destination_address = ""
+    serial_port = ""
+    message = ""
 
     if request.method == 'POST':
-        source_address = request.form['source_address']
-        destination_address = request.form['address']
-        serial_port = '/dev/ttyACM1'
-        message = request.form['message'] + '\n'  # Append newline as required
+        source_address = request.form.get('source_address', '')
+        destination_address = request.form.get('destination_address', '')
+        serial_port = request.form.get('serial_port', '')
+        message = request.form.get('message', '') + '\n'
         message_sent = message.strip()
 
         try:
             if message:
                 result = subprocess.run(
-                    ['../network_utils/build/tx', source_address, destination_address, serial_port],
+                    ['../network_utils/build/tx', source_address, destination_address, serial_port], # Test Code
+                    #['../application_tool/build/tx', source_address, destination_address, serial_port],
                     input=message.encode('utf-8'),
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE
@@ -55,11 +60,16 @@ def send():
             tx_error = f"Error during subprocess call: {str(e)}"
 
     return render_template(
-        'send.html',
-        tx_output=tx_output,
-        tx_error=tx_error,
-        message_sent=message_sent
-    )
+    'send.html',
+    tx_output=tx_output,
+    tx_error=tx_error,
+    message_sent=message_sent,
+    source_address=source_address,
+    destination_address=destination_address,
+    serial_port=serial_port,
+    message=message.strip()
+)
+
 
 def run_rx(source, destination, serial_port):
     global rx_process, rx_output
@@ -94,7 +104,7 @@ def receive():
         source = request.form.get('source')
         destination = request.form.get('destination')
         action = request.form.get('action')
-        serial_port = '/dev/ttyACM1'
+        serial_port = '/dev/ttyACM2'
 
         if not source or not destination:
             error = "Source and destination are required."
