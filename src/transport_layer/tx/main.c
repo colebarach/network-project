@@ -68,11 +68,30 @@ int main(int argc, char* argv[])
         }
         ++size;
 
-        // segment[2] = size >> 2;
         segment[2] = size;
-        segment[3] = (size >> 8) | 0b11110000; //checksum here, just too lazy to implement it yet. checksum is 0b1111 but put on the upper 4 bits
+        segment[3] = (size >> 8);
 
-        // sleep(1); //temporary sleep
+        uint8_t sending_checksum = 0;
+
+        for (int i = 0; i < 2 * (size + 4); i++)
+        {
+            if (i % 2 == 1)
+            {
+                sending_checksum += (segment[i/2] & 0b1111);
+            }
+            else
+            {
+                sending_checksum += (segment[i/2] & 0b11110000) >> 4;
+            }
+            if (sending_checksum > 0b1111)
+            {
+                sending_checksum = (sending_checksum & 0b1111) + 1;
+            }
+        }
+
+        sending_checksum = ~sending_checksum;
+        
+        segment[3] = segment[3] | (sending_checksum << 4);
 
         int failedattempts = 0;
         while(1)
@@ -84,16 +103,32 @@ int main(int argc, char* argv[])
             reported_dest_addr [ADDRESS_SIZE] = '\0';
             if (!strcmp(reported_dest_addr, dest_addr) && seqNum == data[1] && data[0] == ACK_CONTROL && ackSize == 4)
             {
-                //do internet checksum
-                break;
-            }
-            else {
-                failedattempts++;
-                if (failedattempts == 16)
+                int ack_checksum = 0;
+
+                for (int i = 0; i < 2 * (4); i++)
                 {
-                    fprintf(stderr, "Failed to transmit: Too many transmission attempts made. Number of attempted transmissions: %i\n", failedattempts);
-                    return -1;
+                    if (i % 2 == 1)
+                    {
+                        ack_checksum += (data[i/2] & 0b1111);
+                    }
+                    else
+                    {
+                        ack_checksum += (data[i/2] & 0b11110000) >> 4;
+                    }
+                    if (ack_checksum > 0b1111)
+                    {
+                        ack_checksum = (ack_checksum & 0b1111) + 1;
+                    }
                 }
+
+                if (ack_checksum == 0b1111)
+                    break;
+            }
+            failedattempts++;
+            if (failedattempts == 16)
+            {
+                fprintf(stderr, "Failed to transmit: Too many transmission attempts made. Number of attempted transmissions: %i\n", failedattempts);
+                return -1;
             }
         }
 

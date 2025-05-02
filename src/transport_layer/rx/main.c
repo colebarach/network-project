@@ -70,54 +70,68 @@ int main(int argc, char* argv[])
             //which sliding window to use.
             //this next part is the parsing the transport layer segment contained in the data
 
-            int control = data[0];
-            int receivedSeqNum = data[1];
-
-            //these two are stored in a little endian fashion.
             payload_size = data[2] | (data[3] & 0b11) << 8;
-            int internet_checksum = (data[3] & 0b11110000) >> 4;
+            int sent_checksum = 0;
 
-            fwrite(data + 4, 1, payload_size, stdout);
-            fflush(stdout);
+            for (int i = 0; i < 2 * (payload_size + 4); i++)
+            {
+                if (i % 2 == 1)
+                {
+                    sent_checksum += (data[i/2] & 0b1111);
+                }
+                else
+                {
+                    sent_checksum += (data[i/2] & 0b11110000) >> 4;
+                }
+                if (sent_checksum > 0b1111)
+                {
+                    sent_checksum = (sent_checksum & 0b1111) + 1;
+                }
+            }            
 
+            if (sent_checksum == 0b1111)
+            {
+                int control = data[0];
+                int receivedSeqNum = data[1];
+    
+                //these two are stored in a little endian fashion.
+                int internet_checksum = (data[3] & 0b11110000) >> 4;
+    
+                fwrite(data + 4, 1, payload_size, stdout);
+                fflush(stdout);
+    
+                ack_segment[1] = receivedSeqNum;
+    
+                int sending_checksum = 0;
+    
+                for (int i = 0; i < 2 * (4); i++)
+                {
+                    if (i % 2 == 1)
+                    {
+                        sending_checksum += (ack_segment[i/2] & 0b1111);
+                    }
+                    else
+                    {
+                        sending_checksum += (ack_segment[i/2] & 0b11110000) >> 4;
+                    }
+                    if (sending_checksum > 0b1111)
+                    {
+                        sending_checksum = (sending_checksum & 0b1111) + 1;
+                    }
+                }
 
-            // uint8_t calculated_checksum = control + seqnum;
-
-            // if (calculated_checksum > 0b1111)
-            // {
-            //     calculated_checksum = (calculated_checksum & 0b01111) + 1;
-            // }
-            // calculated_checksum += data[2];
-            // if (calculated_checksum > 0b1111)
-            // {
-            //     calculated_checksum = (calculated_checksum & 0b01111) + 1;
-            // }
-            // calculated_checksum += (data[3] & 0b1111);
-            // if (calculated_checksum > 0b1111)
-            // {
-            //     calculated_checksum = (calculated_checksum & 0b1111) + 1;
-            // }
-            // for (int i = 4; i < payload_size + 4; i++)
-            // {
-            //     calculated_checksum += data[i];
-            //     if (calculated_checksum > 0b1111)
-            //     {
-            //         calculated_checksum = (calculated_checksum & 0b1111) + 1;
-            //     }
-            // }
-
-            //make ack packet
-
-            ack_segment[1] = receivedSeqNum;
-
-
-            //internet checksum goes here
-
-            transmit(serial, ack_segment, 4, expected_src_addr);
-            seqNum = ++seqNum % 2;
+                sending_checksum = ~sending_checksum;
+    
+                sending_checksum <<= 4;
+                ack_segment[3] = sending_checksum;
+    
+                transmit(serial, ack_segment, 4, expected_src_addr);
+                seqNum = ++seqNum % 2;
+            }
         }
         else if (!strcmp(expected_src_addr, src_addr) && seqNum != data[1] && payload_size != 0)
         {
+            ack_segment[1] = data[1];
             transmit(serial, ack_segment, 4, expected_src_addr);
         }
     }
