@@ -76,7 +76,8 @@ def run_rx(source, destination, serial_port):
     try:
         rx_output.clear()
         rx_process = subprocess.Popen(
-            ['../network_utils/build/rx', source, destination, serial_port],
+            ['../network_utils/build/rx', source, destination, serial_port], # Test Code
+            ['../application_tool/build/rx', source, destination, serial_port],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True
@@ -100,11 +101,15 @@ def receive():
     source = destination = ""
     error = None
 
+    source = ""
+    destination = ""
+    serial_port = ""
+
     if request.method == 'POST':
-        source = request.form.get('source')
-        destination = request.form.get('destination')
+        source = request.form.get('source', '')
+        destination = request.form.get('destination', '')
+        serial_port = request.form.get('serial_port', '')
         action = request.form.get('action')
-        serial_port = '/dev/ttyACM2'
 
         if not source or not destination:
             error = "Source and destination are required."
@@ -121,7 +126,14 @@ def receive():
             else:
                 error = "No receiver is running."
 
-    return render_template('receive.html', source=source, destination=destination, error=error)
+    return render_template(
+    'receive.html',
+    source=source,
+    destination=destination,
+    serial_port=serial_port,
+    error=error
+)
+
 
 @app.route('/receive/output')
 def receive_output():
