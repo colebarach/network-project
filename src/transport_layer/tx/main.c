@@ -19,10 +19,10 @@
 int main(int argc, char* argv[])
 {
     if (argc != 4)
-	{
+    {
         fprintf (stderr, "Invalid arguments. Usage: 'rx <src addr> <dest addr> <serial port>'.\n");
-		return -1;
-	}
+        return -1;
+    }
 
     // const char* serialPath = "/dev/ttyS1";
     void* serial = serialInit(argv[3]);
@@ -30,7 +30,7 @@ int main(int argc, char* argv[])
     {
         int code = errno;
         fprintf (stderr, "Failed to open serial port '%s': %s.\n", argv[3], strerror (code));
-		return code;
+        return code;
     }
 
     //argv[1] is the destination name of whatever we're reading from
@@ -90,7 +90,7 @@ int main(int argc, char* argv[])
         }
 
         sending_checksum = ~sending_checksum;
-        
+
         segment[3] = segment[3] | (sending_checksum << 4);
 
         int failedattempts = 0;
