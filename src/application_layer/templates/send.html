@@ -43,7 +43,7 @@
 
   <!-- Back Button -->
   <div style="position: absolute; top: 20px; right: 20px;">
-    <a href="/main/">
+    <a href="/">
       <button style="padding: 8px 16px;">Back</button>
     </a>
   </div>
@@ -68,15 +68,20 @@
         <input type="text" id="serial_port" name="serial_port" value="{{ serial_port }}" placeholder="Serial Port" required>
       </div>
 
-      <div class="input-group">
-        <label for="message">Message</label>
-        <input type="text" id="message" name="message" value="{{ message }}" placeholder="Enter your message" required>
-      </div>
-
-      <div class="input-group" style="margin-top: 22px;">
-        <button type="submit" style="padding: 10px 20px;">Send</button>
-      </div>
+	  <div class="buttons">
+		<button type="submit" name="action" value="start" id="start-btn">Start</button>
+		<button type="submit" name="action" value="stop">Stop</button>
+	  </div>
     </form>
+	<form action="/send/output/" method="POST" style="text-align: center; display: flex; gap: 20px">
+		<div class="input-group">
+			<label for="message">Message</label>
+			<input type="text" id="message" name="message" value="{{ message }}" placeholder="Enter your message" required>
+		</div>
+		<div class="input-group" style="margin-top: 22px;">
+			<button type="submit" style="padding: 10px 20px;">Send</button>
+		</div>
+	</form>
   </div>
 
   <div class="output-section">

@@ -62,8 +62,14 @@ int main(int argc, char* argv[])
 
         for (; size < RAWDATA_SIZE; ++size)
         {
-            segment[size + 4] = getchar();
-            if (segment [size + 4] == '\n')
+			int dataByte = getchar();
+
+			if (dataByte == -1)
+				return 0;
+
+            segment[size + 4] = dataByte;
+
+            if (dataByte == '\n')
                 break;
         }
         ++size;
