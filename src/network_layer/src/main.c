@@ -334,11 +334,6 @@ bool receiveDatagram (uint8_t* srcAddr, uint8_t* payload, uint16_t* payloadSize)
 			++(*payloadSize);
 			break;
 		case -1: // Timeout
-			// TODO(Barach): This needs redone.
-			// Reject malformed datagrams. Require payload size be be a non-zero multiple of 4.
-			// if (*dataCount % 4 != 0)
-			//	return false;
-
 			// Addresses starting with 0 are wildcards, they should receive all messages.
 			if (address [0] == 0)
 				return true;
