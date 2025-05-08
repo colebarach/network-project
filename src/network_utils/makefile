@@ -1,7 +1,7 @@
 all: build build/tx build/rx build/ping-client build/ping-server build/flood-client build/flood-server build/listen build/sh-client build/sh-server
 
 COMMON_SRC :=	adapter.c	\
-				serial.c	\
+				serial.c
 
 build:
 	mkdir -p build

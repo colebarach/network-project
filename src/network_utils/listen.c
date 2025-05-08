@@ -1,6 +1,7 @@
 // Includes
 #include "adapter.h"
 #include "serial.h"
+#include "timespec.h"
 
 // C Standard Library
 #include <errno.h>
@@ -27,6 +28,9 @@ int main (int argc, char** argv)
 
 	bool asciiMode;
 
+	struct timespec timeStart;
+	timespec_get (&timeStart, TIME_UTC);
+
 	switch (argv [1][0])
 	{
 	case 'a': // ASCII
@@ -50,6 +54,14 @@ int main (int argc, char** argv)
 		// Receive the datagram
 		size_t size = receive (serial, data, addr, -1);
 		data [DATAGRAM_SIZE] = '\0';
+
+		// Print the timestamp
+		struct timespec timeStamp;
+		timespec_get(&timeStamp, TIME_UTC);
+		timeStamp = timespec_subtract (&timeStamp, &timeStart);
+		printf ("[");
+		timespec_fprintf (stdout, &timeStamp);
+		printf ("] : ");
 
 		if (asciiMode)
 		{
