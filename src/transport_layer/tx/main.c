@@ -16,6 +16,10 @@
 #define ACK_CONTROL 0x6A
 #define RAWDATA_SIZE 1020
 
+
+// argv[1]: source address
+// argv[2]: destination address
+// argv[3]: Linux serial port address
 int main(int argc, char* argv[])
 {
     if (argc != 4)
@@ -24,7 +28,6 @@ int main(int argc, char* argv[])
         return -1;
     }
 
-    // const char* serialPath = "/dev/ttyS1";
     void* serial = serialInit(argv[3]);
     if (serial == NULL)
     {
@@ -43,7 +46,6 @@ int main(int argc, char* argv[])
     // Set the device address
     setAddress (serial, src_addr);
 
-    //temporary, should implement the maxseqnum function. This is assuming RWS = SWS = 1
     const int RWS = 1;
     const int maxSeqNum = 2;
 
@@ -62,23 +64,25 @@ int main(int argc, char* argv[])
 
         for (; size < RAWDATA_SIZE; ++size)
         {
-			int dataByte = getchar();
+			int dataByte = getchar(); //This is where we receive the data from stdin.
 
-			if (dataByte == -1)
+			if (dataByte == -1) //error case where an EOF is encountered.
 				return 0;
 
             segment[size + 4] = dataByte;
 
-            if (dataByte == '\n')
+            if (dataByte == '\n') //stop reading when endline is read.
                 break;
         }
         ++size;
 
         segment[2] = size;
-        segment[3] = (size >> 8);
+        segment[3] = (size >> 8); //the most significiant bits of the size are put in the right most two bits. We do this in order to adhere to little-endianness.
 
         uint8_t sending_checksum = 0;
 
+        //calculating internet checksum. Checksum is based off every four bits, so for each byte, we 
+        //use the lower 4 bits, then the upper 4 bits, when calculating the checksum.
         for (int i = 0; i < 2 * (size + 4); i++)
         {
             if (i % 2 == 1)
@@ -89,23 +93,24 @@ int main(int argc, char* argv[])
             {
                 sending_checksum += (segment[i/2] & 0b11110000) >> 4;
             }
-            if (sending_checksum > 0b1111)
+            if (sending_checksum > 0b1111) //if there is a carried one after the 4th bit, then add the carry to the lowest bit.
             {
                 sending_checksum = (sending_checksum & 0b1111) + 1;
             }
         }
 
-        sending_checksum = ~sending_checksum;
+        sending_checksum = ~sending_checksum; //inverting the bits is the last step of calculating the checksum.
 
+        //the internet checksum is stored in the leftmost 4 bits. We do this in order to adhere to little-endianness.
         segment[3] = segment[3] | (sending_checksum << 4);
 
         int failedattempts = 0;
         while(1)
         {
-            transmit(serial, segment, size + 4, dest_addr);
+            transmit(serial, segment, size + 4, dest_addr); //send segment
             char reported_dest_addr[ADDRESS_SIZE + 1];
             char data[DATAGRAM_SIZE];
-            size_t ackSize = receive(serial, data, reported_dest_addr, 50); //change the timout to something
+            size_t ackSize = receive(serial, data, reported_dest_addr, 50); //wait 50ms for ACK segment
             reported_dest_addr [ADDRESS_SIZE] = '\0';
             if (!strcmp(reported_dest_addr, dest_addr) && seqNum == data[1] && data[0] == ACK_CONTROL && ackSize == 4)
             {
@@ -127,7 +132,7 @@ int main(int argc, char* argv[])
                     }
                 }
 
-                if (ack_checksum == 0b1111)
+                if (ack_checksum == 0b1111) //checksum matches, thus ACK segment is acknowledged.
                     break;
             }
             failedattempts++;
